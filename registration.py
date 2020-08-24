@@ -165,7 +165,7 @@ class Registrant():
 
     @property
     def pretty(self):
-        return json.dumps(self._raw, indent=2, force_ascii=False)
+        return json.dumps(self._raw, indent=2, ensure_ascii=False)
 
     def pprint(self):
         print(self.pretty)
