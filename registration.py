@@ -56,7 +56,8 @@ class RegistrantList(UserList):
         report = []
         report.append('Report time: {}'.format(datetime.datetime.now().isoformat()))
         report.append('\nTotal registrants: {}'.format(len(self.data)))
-        report.append('Age range: {}-{}\n'.format(min(r.age for r in self.data), max(r.age for r in self.data)))
+        report.append('Age range: {}-{}'.format(min(r.age for r in self.data), max(r.age for r in self.data)))
+        report.append('Total Donations: {}\n'.format(sum(r.donation for r in self.data)))
 
         # Core Courses
         report.append('Core Course Registration\n{}\n'.format('='*24))
@@ -143,7 +144,7 @@ class Registrant():
 
     @property
     def extras(self):
-        return bool([x for x in self.true_fields if x['path'] == 'extras.session1'])
+        return bool(get_path('extras.session1'))
 
     @property
     def qa_forums(self):
@@ -163,7 +164,7 @@ class Registrant():
 
     @property
     def pretty(self):
-        return json.dumps(self._raw, indent=2)
+        return json.dumps(self._raw, indent=2, force_ascii=False)
 
     def pprint(self):
         print(self.pretty)
@@ -258,7 +259,6 @@ def course_title(code):
     return '{name} with {instructor}'.format(**COURSES[code])
 
 # List of all courses
-#TODO: Add class names to each
 COURSES = {
   "BOF": {
     "instructor": "Cara Wildman",
