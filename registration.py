@@ -55,7 +55,8 @@ class RegistrantList(UserList):
 
         report = []
         report.append('Report time: {}'.format(datetime.datetime.now().isoformat()))
-        report.append('\nTotal registrants: {}\n'.format(len(self.data)))
+        report.append('\nTotal registrants: {}'.format(len(self.data)))
+        report.append('Age range: {}-{}\n'.format(min(r.age for r in self.data), max(r.age for r in self.data)))
 
         # Core Courses
         report.append('Core Course Registration\n{}\n'.format('='*24))
@@ -103,6 +104,13 @@ class Registrant():
     def email_addr(self):
         email = self.get_path('email').get('value')
         return email
+    
+    @property
+    def age(self):
+      dob = self.get_path('dateOfBirth').get('value')
+      dob = datetime.date.fromisoformat(dob)
+      age = datetime.date.today() - dob
+      return age.days // 365
 
     @property
     def true_fields(self):
@@ -145,7 +153,9 @@ class Registrant():
     def donation(self):
         donation = self.get_path('considerGivingDonationThanks.amount')
         if donation:
-            return donation['value']
+            return float(donation['value'])
+        else:
+            return False
 
     @property
     def status(self):
