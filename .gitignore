@@ -1,0 +1,10 @@
+#Python
+*.pyc
+*.lock
+*.pickle
+
+#VSCode
+.vscode/*
+
+#SEKRITS
+*secret.json
