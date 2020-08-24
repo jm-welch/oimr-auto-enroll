@@ -145,7 +145,7 @@ class Registrant():
 
     @property
     def extras(self):
-        return bool(get_path('extras.session1'))
+        return bool(self.get_path('extras.session1'))
 
     @property
     def qa_forums(self):
