@@ -3,6 +3,7 @@ import re
 import json
 import datetime
 from collections import UserList, Counter
+import hashlib
 
 DATE_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
@@ -21,6 +22,11 @@ class RegistrantList(UserList):
     @property
     def _raw(self):
         return [Registrant(d) for d in self._data]
+
+    @property
+    def registrant_count(self):
+        """ Count unique registrants, using Registrant.oimr_id as a key """
+        return len(set(r.oimr_id for r in self.data))
 
     def validate(self, data):
         return [d for d in data if d.get('status')=='completed']
@@ -53,11 +59,17 @@ class RegistrantList(UserList):
         fmt = '{:^8} | {}'
         line_fmt = '{0:-^8} | {0:-^68}'
 
+        counts = (
+            len(self.data),
+            self.registrant_count,
+            len(self.data) - self.registrant_count
+            )
+
         report = []
         report.append('Report time: {}'.format(datetime.datetime.now().isoformat()))
-        report.append('\nTotal registrants: {}'.format(len(self.data)))
+        report.append('\nTotal registrants: {} ({} unique, {} duplicates)'.format(*counts))
         report.append('Age range: {}-{}'.format(min(r.age for r in self.data), max(r.age for r in self.data)))
-        report.append('Total Donations: {}\n'.format(sum(r.donation for r in self.data)))
+        report.append('Total Donations: {:.02f}\n'.format(sum(r.donation for r in self.data)))
 
         # Core Courses
         report.append('Core Course Registration\n{}\n'.format('='*24))
@@ -96,6 +108,20 @@ class Registrant():
         self.dateCreated = datetime.datetime.strptime(self._raw.get('dateCreated'), DATE_FMT)
 
     @property
+    def oimr_id(self):
+        """
+        Create a hash of the registrant's full name,
+        date of birth, and email to serve as a unique ID
+        """
+        string_to_hash = self.full_name.lower()
+        string_to_hash += self.get_path('dateOfBirth').get('value')
+        string_to_hash += self.email_addr.lower()
+
+        hashed_string = hashlib.md5(string_to_hash.encode()).hexdigest()
+        return hashed_string
+
+
+    @property
     def full_name(self):
         fname = self.get_path('name.first').get('value')
         lname = self.get_path('name.last').get('value')
@@ -105,14 +131,18 @@ class Registrant():
     def email_addr(self):
         email = self.get_path('email').get('value')
         return email
-    
+
+    @property
+    def dob(self):
+        dob = self.get_path('dateOfBirth').get('value')
+        dob_fields = [int(x) for x in dob.split('-')]
+        dob = datetime.date(*dob_fields)
+        return dob
+
     @property
     def age(self):
-      dob = self.get_path('dateOfBirth').get('value')
-      dob_fields = [int(x) for x in dob.split('-')]
-      dob = datetime.date(*dob_fields)
-      age = datetime.date.today() - dob
-      return age.days // 365
+        age = datetime.date.today() - self.dob
+        return age.days // 365
 
     @property
     def true_fields(self):
