@@ -109,7 +109,8 @@ class Registrant():
     @property
     def age(self):
       dob = self.get_path('dateOfBirth').get('value')
-      dob = datetime.date.fromisoformat(dob)
+      dob_fields = [int(x) for x in dob.split('-')]
+      dob = datetime.date(*dob_fields)
       age = datetime.date.today() - dob
       return age.days // 365
 
