@@ -1,3 +1,4 @@
+import courses
 import requests
 import re
 import json
@@ -6,11 +7,6 @@ from collections import UserList, Counter
 import hashlib
 
 DATE_FMT = "%Y-%m-%dT%H:%M:%SZ"
-
-def makeRegistrationList(secretFile):
-    api = RegFoxAPI(secretFile)
-    registrants = RegistrantList(api.get_registrants())
-    return api, registrants
 
 class RegistrantList(UserList):
     def __init__(self, data=[]):
@@ -32,16 +28,14 @@ class RegistrantList(UserList):
         return [d for d in data if d.get('status')=='completed']
 
     def core_course_count(self):
-        course_count = Counter({c: 0 for c in COURSES})
+        course_count = Counter({c: 0 for c in courses.COURSES})
         for r in self.data:
             if r.core_courses:
                 course_count.update(r.core_courses)
         return course_count
 
     def live_qa_count(self):
-        qa_count = Counter()
-        for code, data in COURSES.items():
-            qa_count.update({qa: 0 for qa in data['liveQA']})
+        qa_count = Counter({qa: 0 for qa in courses.list_all_liveQA()})
         for r in self.data:
             if r.qa_forums:
                 qa_count.update(r.qa_forums)
@@ -92,7 +86,7 @@ class RegistrantList(UserList):
         report.append(fmt.format('Students', 'Course'))
         report.append(line_fmt.format('-'))
         for course, count in self.core_course_count().items():
-            report.append(fmt.format(count, '({}) '.format(course) + course_title(course)))
+            report.append(fmt.format(count, '({}) '.format(course) + courses.course_title(course)))
 
         report.append('\n\n')
 
@@ -103,7 +97,7 @@ class RegistrantList(UserList):
         report.append(fmt.format('Students', 'Course'))
         report.append(line_fmt.format('-'))
         for course, count in self.live_qa_count().items():
-            report.append(fmt.format(count, '({}) '.format(course) + course_title(course[:3])))
+            report.append(fmt.format(count, '({}) '.format(course) + courses.course_title(course[:3])))
 
         for line in report:
             print(line)
@@ -300,177 +294,11 @@ class RegFoxAPI():
         return registrants
 
 
-def course_title(code):
-    return '{name} with {instructor}'.format(**COURSES[code])
+def makeRegistrationList(secretFile):
+    api = RegFoxAPI(secretFile)
+    registrants = RegistrantList(api.get_registrants())
+    return api, registrants
 
-# List of all courses
-COURSES = {
-  "BOF": {
-    "instructor": "Cara Wildman",
-    "name": "Bodhrán (Fundamentals)",
-    "liveQA": {
-      "BOFL1": None
-    }
-  },
-  "BOI": {
-    "instructor": "Paddy League",
-    "name": "Bodhrán (Intermediate & Advanced)",
-    "liveQA": {
-      "BOIL1": None
-    }
-  },
-  "BZK": {
-    "instructor": "Eoin O’Neill",
-    "name": "Bouzouki (All Levels)",
-    "liveQA": {
-      "BZKL1": None
-    }
-  },
-  "BOX": {
-    "instructor": "Colm Gannon",
-    "name": "Button Accordion (All Levels)",
-    "liveQA": {
-      "BOXL1": None
-    }
-  },
-  "COF": {
-    "instructor": "Kelly Gannon",
-    "name": "Concertina (Fundamentals)",
-    "liveQA": {
-      "COFL1": None
-    }
-  },
-  "COI": {
-    "instructor": "Cormac Begley",
-    "name": "Concertina (Intermediate & Advanced)",
-    "liveQA": {
-      "COIL1": None
-    }
-  },
-  "DAN": {
-    "instructor": "Jaclyn O'Riley",
-    "name": "Dancing (Sean-nós)",
-    "liveQA": {
-      "DANL1": None
-    }
-  },
-  "FIF": {
-    "instructor": "Chris Buckley",
-    "name": "Fiddle (Fundamentals)",
-    "liveQA": {
-      "FIFL1": None
-    }
-  },
-  "FIL": {
-    "instructor": "Liz Doherty",
-    "name": "Fiddle (Intermediate)",
-    "liveQA": {
-      "FILL1": None
-    }
-  },
-  "FIE": {
-    "instructor": "Eimear Arkins",
-    "name": "Fiddle (Intermediate)",
-    "liveQA": {
-      "FIEL1": None
-    }
-  },
-  "FIM": {
-    "instructor": "Manus McGuire",
-    "name": "Fiddle (Intermediate)",
-    "liveQA": {
-      "FIML1": None
-    }
-  },
-  "FIA": {
-    "instructor": "Zoë Connway",
-    "name": "Fiddle (Advanced)",
-    "liveQA": {
-      "FIAL1": None
-    }
-  },
-  "FLI": {
-    "instructor": "Harry Bradley",
-    "name": "Flute (Intermediate & Advanced)",
-    "liveQA": {
-      "FLIL1": None
-    }
-  },
-  "GUF": {
-    "instructor": "Jeff Moore",
-    "name": "Guitar (Fundamentals)",
-    "liveQA": {
-      "GUFL1": None
-    }
-  },
-  "GUI": {
-    "instructor": "Jim Murray",
-    "name": "Guitar (Intermediate & Advanced)",
-    "liveQA": {
-      "GUIL1": None
-    }
-  },
-  "HRP": {
-    "instructor": "Eileen Gannon",
-    "name": "Harp (All Levels)",
-    "liveQA": {
-      "HRPL1": None
-    }
-  },
-  "MBF": {
-    "instructor": "John Morrow",
-    "name": "Mandolin/Banjo (Fundamentals)",
-    "liveQA": {
-      "MBFL1": None
-    }
-  },
-  "MAI": {
-    "instructor": "Brian McGillicuddy",
-    "name": "Mandolin (Intermediate & Advanced)",
-    "liveQA": {
-      "MAIL1": None
-    }
-  },
-  "PIA": {
-    "instructor": "Mirella Murray",
-    "name": "Piano Accordion (All Levels)",
-    "liveQA": {
-      "PIAL1": None
-    }
-  },
-  "SNG": {
-    "instructor": "Liz Hanley",
-    "name": "Singing (All Levels)",
-    "liveQA": {
-      "SNGL1": None
-    }
-  },
-  "TBI": {
-    "instructor": "Gerry O’Connor",
-    "name": "Tenor Banjo (Intermediate & Advanced)",
-    "liveQA": {
-      "TBIL1": None
-    }
-  },
-  "UIL": {
-    "instructor": "Joey Abarta",
-    "name": "Uilleann Pipes",
-    "liveQA": {
-      "UILL1": None
-    }
-  },
-  "WHI": {
-    "instructor": "Joanie Madden",
-    "name": "Whistle (Intermediate & Advanced)",
-    "liveQA": {
-      "WHIL1": None
-    }
-  },
-  "WFF": {
-    "instructor": "L.E. McCullough",
-    "name": "Whistle/Flute (Fundamentals)",
-    "liveQA": {
-      "WFFL1": None
-    }
-  }
-}
+if __name__ == '__main__':
+    api, registrants = makeRegistrationList('regfox_secret.json')
+    registrants.print_report()
