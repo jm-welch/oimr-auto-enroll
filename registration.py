@@ -55,6 +55,20 @@ class RegistrantList(UserList):
         result = [r.dateCreated.replace(minute=0, second=0) for r in self.data]
         return result
 
+    def duplicate_registrations(self):
+        dupe_ids = Counter(r.oimr_id for r in self.data)
+        dupe_ids = [x for x in dupe_ids if dupe_ids[x] > 1]
+        dupe_items = [r for r in self.data if r.oimr_id in dupe_ids]
+        for d in dupe_items:
+            print('\n'.join([
+                d.full_name,
+                d.email_addr,
+                d.get_path('dateOfBirth').get('value'),
+                'Core Courses: {}'.format(d.core_courses),
+                'QA Forums   : {}'.format(d.qa_forums),
+                'Extras      : {}'.format(d.extras)
+            ])+'\n')
+
     def print_report(self):
         fmt = '{:^8} | {}'
         line_fmt = '{0:-^8} | {0:-^68}'
