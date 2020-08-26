@@ -49,6 +49,17 @@ class RegistrantList(UserList):
         result = [r.dateCreated.replace(minute=0, second=0) for r in self.data]
         return result
 
+    def hourly_count(self, start='2020-08-22 13:00'):
+        result = {}
+        timestamp = datetime.datetime.strptime(start, '%Y-%m-%d %H:%M')
+        while timestamp < datetime.datetime.utcnow():
+            c = len([r for r in self.data if r.dateCreated.replace(minute=0, second=0) == timestamp])
+            result[timestamp] = c
+            timestamp += datetime.timedelta(hours=1)
+
+        return result
+
+
     def duplicate_registrations(self):
         dupe_ids = Counter(r.oimr_id for r in self.data)
         dupe_ids = [x for x in dupe_ids if dupe_ids[x] > 1]
@@ -294,9 +305,9 @@ class RegFoxAPI():
         return registrants
 
 
-def makeRegistrationList(secretFile):
+def makeRegistrationList(secretFile, **kwargs):
     api = RegFoxAPI(secretFile)
-    registrants = RegistrantList(api.get_registrants())
+    registrants = RegistrantList(api.get_registrants(**kwargs))
     return api, registrants
 
 if __name__ == '__main__':
