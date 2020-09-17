@@ -35,10 +35,10 @@ class PyAnywhereAPI():
                 pyAInfo = json.load(infile)
                 # print(apiInfo)
 
-                self.userName = pyAInfo['userName']  # 'oimr'
-                self.userPass = pyAInfo['userPass']  # 'Ke$haJig1'
-                self.dbPass = pyAInfo['dbPass']  # '0IMRData$t0r3' #again lazy, shortining concatenation.
-                self.dbName = pyAInfo['dbName']  # 'oimr$OIMR'
+                self.userName = pyAInfo['userName']
+                self.userPass = pyAInfo['userPass']
+                self.dbPass = pyAInfo['dbPass']
+                self.dbName = pyAInfo['dbName']
                 # arrConn = self.make_arrConnParams()
                 # tunnel = self.make_tunnel(arrConn)
 
@@ -88,6 +88,8 @@ class PyAnywhereAPI():
 
     def close_tunnel(self, tunnel):
         if tunnel.is_active:
+            # TODO: write close script
+            # TODO: write error code
             print("should we close tunnel?")
 
     def make_connection(self, arrConn, tunnel):
@@ -124,11 +126,15 @@ def makeLogFile(mess):
 
 
 def makeOimrConnection(secretJson, **kwargs):
+    # make api to create connections strings for ssh tunnel into pythonAnywhere and its mysql database
     pyAnyApi = PyAnywhereAPI(secretJson)
+    # create parameter object that contains all strings and values to create connection strings
     arrConn = pyAnyApi.make_arrConnParams()
+    # Make the ssh tunnel into python anywhere
     tunnel = pyAnyApi.make_tunnel(arrConn)
-    mysqlConn, engine, mysqlLog = (pyAnyApi.make_connection(arrConn, tunnel))
-
+    # create the SqlAlchemy Engine with tunnel, and use it to make a mysal connection to get access to log table
+    mysqlConn, engine, mysqlLogTable = (pyAnyApi.make_connection(arrConn, tunnel))
+    # retun all the elements
     return pyAnyApi, arrConn, tunnel, mysqlConn, engine, mysqlLog
 
 
@@ -138,7 +144,7 @@ if __name__ == '__main__':
 
     logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
-    mysqlClose = (pyAnyApi.close_connection(mysqlConn, tunnel))
+    mysqlClose = (pyAnyApi.close_connection(mysqlConn, engine, tunnel))
 # registrants.print_report()
 
 
