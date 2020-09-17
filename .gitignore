@@ -5,6 +5,7 @@
 
 #VSCode
 .vscode/*
-
+#idea
+.idea
 #SEKRITS
 *secret.json
