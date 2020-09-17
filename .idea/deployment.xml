@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" serverName="pythonanywhere-oimr" uploadOnCheckin="917dc23b-341d-4bfe-9883-8c815eb4aa65" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <serverData>
+      <paths name="pythonanywhere-oimr">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myUploadOnCheckinName" value="pythonanywhere-oimr" />
+  </component>
+</project>
