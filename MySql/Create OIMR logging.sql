@@ -1,3 +1,4 @@
+-- table to hold log events for regfox-google classrooom Bridge
 create table oimr_logging
 (
     recno     int          not null
