@@ -3,7 +3,7 @@
   <component name="WebServers">
     <option name="servers">
       <webServer id="917dc23b-341d-4bfe-9883-8c815eb4aa65" name="pythonanywhere-oimr" url="https://www.pythonanywhere.com/user/oimr/">
-        <fileTransfer rootFolder="/home/oimr" accessType="SFTP" host="ssh.pythonanywhere.com" port="22" sshConfigId="bb5eae05-0cf6-433e-b3e3-0f585e1a0e0f" sshConfig="oimr@ssh.pythonanywhere.com:22 password">
+        <fileTransfer rootFolder="/user/oimr" accessType="SFTP" host="ssh.pythonanywhere.com" port="22" sshConfigId="bb5eae05-0cf6-433e-b3e3-0f585e1a0e0f" sshConfig="oimr@ssh.pythonanywhere.com:22 password">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="60000" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>
