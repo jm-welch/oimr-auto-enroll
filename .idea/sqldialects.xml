@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="SqlDialectMappings">
+    <file url="remoteDeploymentFS://&lt;917dc23b-341d-4bfe-9883-8c815eb4aa65&gt;/oimr-auto-enroll/mysql/Create OIMR logging.sql" dialect="MySQL" />
     <file url="file://$PROJECT_DIR$/MySql/Create OIMR logging.sql" dialect="MySQL" />
   </component>
 </project>
