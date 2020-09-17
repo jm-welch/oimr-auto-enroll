@@ -5,7 +5,7 @@
       <paths name="pythonanywhere-oimr">
         <serverdata>
           <mappings>
-            <mapping deploy="/oimr-auto-enroll" local="$PROJECT_DIR$" web="/user/oimr/oimr-auto-enroll" />
+            <mapping deploy="/oimr-auto-enroll" local="$PROJECT_DIR$" web="/oimr-auto-enroll" />
           </mappings>
           <excludedPaths>
             <excludedPath local="true" path="$PROJECT_DIR$/.idea" />
