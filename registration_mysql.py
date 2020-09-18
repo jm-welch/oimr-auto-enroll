@@ -1,3 +1,4 @@
+from pythonAnywhereConnect import PyAnywhereAPI as db
 import courses
 import requests
 import re
@@ -6,6 +7,7 @@ import datetime
 from collections import UserList, Counter
 import hashlib
 
+db.close_tunnel
 DATE_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -372,6 +374,8 @@ def makeRegistrationList(secretFile, **kwargs):
     registrants = RegistrantList(api.get_registrants(**kwargs))
     return api, registrants
 
-# if __name__ == '__main__':
-# api, registrants = makeRegistrationList('regfox_secret.json')
-# registrants.print_report()
+
+if __name__ == '__main__':
+    api, registrants = makeRegistrationList('regfox_secret.json')
+
+    # registrants.print_report()
