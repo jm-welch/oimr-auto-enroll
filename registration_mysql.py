@@ -1,4 +1,4 @@
-from pythonAnywhereConnect import PyAnywhereAPI as db
+import pythonAnywhereConnect as pa
 import courses
 import requests
 import re
@@ -7,7 +7,8 @@ import datetime
 from collections import UserList, Counter
 import hashlib
 
-db.close_tunnel
+db = pa.get_pyAnywhereAPI()
+
 DATE_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -370,6 +371,7 @@ class RegFoxAPI():
 
 
 def makeRegistrationList(secretFile, **kwargs):
+    db.make_log_entry('INFO', 'registration', 'makeRegistration', 'Starting RegfoxApi', 373)
     api = RegFoxAPI(secretFile)
     registrants = RegistrantList(api.get_registrants(**kwargs))
     return api, registrants

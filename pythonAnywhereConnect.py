@@ -159,8 +159,8 @@ class PyAnywhereAPI():
                                       sa.Column('mess_date', sa.DATETIME),
                                       sa.Column('message', sa.VARCHAR)
                                       )
-        self.make_log_entry("Info", "oimrConnect", "make_connection",
-                            "Established connection to Mysql database log table")
+        self.make_log_entry("Info", "PythonAnywhereAPI", "make_connection",
+                            "Established connection to Mysql database log table", 162)
 
         # return conn, eng, tblOimrLogging
         def close_connection(self, tun, eng, sqlConn):
@@ -189,6 +189,9 @@ class PyAnywhereAPI():
         odo.odo(log_string, self.mysqlLogTable, dshape=logDs, bind=self.gPaEngine, raise_on_errors=True)
 
 
+def get_pyAnywhereAPI():
+    db = PyAnywhereAPI('PythonAnywhere_secret.json')
+    return db
 if __name__ == '__main__':
     db = PyAnywhereAPI('PythonAnywhere_secret.json')
     print('done')
