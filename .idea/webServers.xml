@@ -9,6 +9,13 @@
           </advancedOptions>
         </fileTransfer>
       </webServer>
+      <webServer id="3f4e9dcf-a042-453b-b852-3327be270fa7" name="pythonAnywhere-local library" url="http://pythonAnywhere.com/user/oimr">
+        <fileTransfer rootFolder="/home/oimr" accessType="SFTP" host="ssh.pythonanywhere.com" port="22" sshConfigId="bb5eae05-0cf6-433e-b3e3-0f585e1a0e0f" sshConfig="oimr@ssh.pythonanywhere.com:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
     </option>
   </component>
 </project>
