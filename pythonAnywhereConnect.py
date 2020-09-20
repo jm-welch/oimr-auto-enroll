@@ -215,8 +215,8 @@ class PyAnywhereAPI():
         eMess1 = {}
         eMess2 = {}
         if exc_traceback.tb_next == None:
-            tbE = exc_traceback.tb_frame
-            eMess1 = str(tbE.tb_frame).split(",")
+            tbE = exc_traceback
+            eMess1 = str(exc_traceback.tb_frame).replace('>', '').replace('<', '').split(",")
             eModule1 = eMess1[1]
             eModule1 = str(eModule1[eModule1.rindex(r'/'):eModule1.rindex('.')]).replace('/', '')
             eMethod1 = eMess1[3].replace('code ', '').replace(' ', '')
@@ -225,11 +225,11 @@ class PyAnywhereAPI():
             eLineNo = tbE.tb_lineno
             eMethod = eMethod1
             eModule = eModule1
-            eMessage = str(exc_value) + 'error found on ' + eMess1[
-                2] + ' called from ' + eModule1 + '.' + eMethod1 + 'line number: ' + str(eLineNo)
+            eMessage = 'ERROR MESSAGE: ' + str(
+                exc_value) + ' This error found on ' + eModule1 + '.' + eMethod1 + ' line number: ' + str(eLineNo1)
         else:
             tbE = exc_traceback.tb_next
-            # tbF = exc_traceback.tb_frame
+            # tbF = exc_tracebac' k.tb_frame
             eMess1 = str(exc_traceback.tb_frame).replace('>', '').replace('<', '').split(",")
             eMess2 = str(tbE.tb_frame).replace('>', '').replace('<', '').split(",")
             eMethod1 = eMess1[3].replace('code ', '').replace(' ', '')
@@ -240,8 +240,9 @@ class PyAnywhereAPI():
             eModule2 = str(eModule2[eModule2.rindex(r'\\'):eModule2.rindex('.')]).replace('\\', '')
             eLineNo = tbE.tb_lineno
             eLineNo1 = exc_traceback.tb_lineno
-            eMessage = str(exc_value) + ' This error found on ' + eMess1[
-                2] + ' called from ' + eModule1 + '.' + eMethod1 + ' line number: ' + str(eLineNo1)
+            eMessage = 'ERROR MESSAGE: ' + str(
+                exc_value) + ' This error found on ' + eModule2 + '.' + eMethod2 + ' line number: ' + str(
+                eLineNo) + ' was called from ' + eModule1 + '.' + eMethod1 + ' line number: ' + str(eLineNo1)
             eMethod = eMethod2
             eModule = eModule2
 

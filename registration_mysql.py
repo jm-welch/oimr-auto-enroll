@@ -373,9 +373,7 @@ class RegFoxAPI():
 
 def makeRegistrationList(secretFile, **kwargs):
     try:
-
-        oimrDb.make_log_info_entry(1, 'registration', 'makeRegistration', 'Starting RegfoxApi', 377)
-
+        oimrDb.make_log_info_entr(1, 'registration-mysql', 'makeRegistration', 'Starting RegfoxApi', 377)
     except Exception:
         # make log exception calls sys.exc_info() so all the error capture is done in pythonAnywhereConnect
         oimrDb.make_log_exception_entry()
