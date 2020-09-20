@@ -205,7 +205,7 @@ class PyAnywhereAPI():
         recno = None  # recno is the id field and autoincrements. odo can use a None object to
         log_string = [[recno, log_level, module, method, err_line, timeStampNow, message]]
         logDs = odo.discover(self.mysqlOimrLogTable)
-        odo.odo(log_string, self.mysqlOimrLogTabl, dshape=logDs, bind=self.gPaEngine, raise_on_errors=True)
+        odo.odo(log_string, self.mysqlOimrLogTable, dshape=logDs, bind=self.gPaEngine, raise_on_errors=True)
 
     def make_log_exception_entry(self):
         timeStampNow = (time.strftime("%Y-%m-%d %I:%M:%S"))
