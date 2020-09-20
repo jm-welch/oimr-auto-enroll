@@ -1,4 +1,5 @@
 import pythonAnywhereConnect as pa
+from pythonAnywhereConnect import PyAnywhereAPI as db
 import courses
 import requests
 import re
@@ -7,7 +8,7 @@ import datetime
 from collections import UserList, Counter
 import hashlib
 
-db = pa.get_pyAnywhereAPI()
+oimrDb = pa.get_pyAnywhereAPI()
 
 DATE_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
@@ -371,7 +372,14 @@ class RegFoxAPI():
 
 
 def makeRegistrationList(secretFile, **kwargs):
-    db.make_log_entry('INFO', 'registration', 'makeRegistration', 'Starting RegfoxApi', 373)
+    try:
+
+        oimrDb.make_log_info_entry(1, 'registration', 'makeRegistration', 'Starting RegfoxApi', 377)
+
+    except Exception:
+        # make log exception calls sys.exc_info() so all the error capture is done in pythonAnywhereConnect
+        oimrDb.make_log_exception_entry()
+
     api = RegFoxAPI(secretFile)
     registrants = RegistrantList(api.get_registrants(**kwargs))
     return api, registrants
@@ -379,5 +387,5 @@ def makeRegistrationList(secretFile, **kwargs):
 
 if __name__ == '__main__':
     api, registrants = makeRegistrationList('regfox_secret.json')
-
+    print('done')
     # registrants.print_report()

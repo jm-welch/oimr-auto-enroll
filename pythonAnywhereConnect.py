@@ -2,11 +2,14 @@
 """
 OIMR: brige project:
 author Toar Schell
-
 What id does:
-1) creates a ssh tunnel for remoting into PythonAnywhere.
-2) Use that tunnel to aquire a locol remote port for a SqlAlchemy connection string.
+1) Creates a ssh tunnel for remoting into PythonAnywhere.
+    make_pyanywhere_ssh_tunnel(self) -> gPaTunnel (used to get to pythonAnywhere Website)
+2) Use that tunnel to aquire a locol remote port for a SqlAlchemy connection using concatenated parameter array to make a connection string.
+    make_pyanywhere_mysql_connection -> gPaEngine, gPaMysqlConn and finally a target table for logging g
 3) create multiple table hooks for use of Odo which will do bulk inserts rapidly.
+
+4) grabs system error tracing and uses traceback to create formated error messages
 
 Requirements: pythonAnywhere_secret json file that holds passwords and usernames.
 Modules: sqlAlchemy, pandas odo multipledispatch
@@ -24,8 +27,19 @@ USAGE: At this point its mainly to be used as an import into a script which will
 allow access to the mysql database.
 IMPORTANT: GIVEN THAT THIS TAKES A FEW SECONDS TO RUN ALL THE CONNECTIONS THROUGH TUNNELS AND ENGINES, I WOULD IMPORT
 IT EARLY IN THE STACK SO AS TO ENABLE LOG WRITING EARLY ON.
+when importing:
 
-from oimrConnect import PyAnywhereAPI as db
+import pythonAnywhereConnect as pa
+oimrDb = get_pyAnywhereAPI():
+try:
+    some code...
+    # If level is INFO or you want to document a process
+    oimrDb.make_log_info_entry('INFO',..)
+exception:
+    # First and last line automatic debugging
+    oimrDb.make_log_exception_entry()
+
+
 
 then in exceptions or when you want to enter into log table
 db.make_log_entry(....)
@@ -57,6 +71,10 @@ import time
 import json
 import collections
 import odo
+import traceback
+import gc
+import sys
+import string
 
 sshtunnel.SSH_TIMEOUT = 5.0
 sshtunnel.TUNNEL_TIMEOUT = 5.0
@@ -95,12 +113,12 @@ class PyAnywhereAPI():
         # ok lets make connection array and and use sshTunnel forwarding to grab a port for sqlAlchemy engine
         self.make_arrConnParams()
         # Make the ssh tunnel into pythonAnywhere
-        self.make_tunnel()
+        self.make_pyanywhere_ssh_tunnel()
         # now lets use tunnel to create a connection string then
         # create the SqlAlchemy Engine with tunnel,
         # this will create/begin a SqlAlchemy engine, start a connection to oimr$OIMR database
         # and finally expose the mysql log table so that odo can write to it.
-        self.make_connection()
+        self.make_pyanywhere_mysql_connection()
 
     def make_arrConnParams(self):
         # This is multi dimensional so we can use it for other connections to any other databases we may want to set up.
@@ -116,7 +134,7 @@ class PyAnywhereAPI():
         self.arrConnVars['pa']['OIMR']['localBind'] = 'dynamic after tunnel start'
         self.arrConnVars['pa']['OIMR']['connection'] = r'mysql+mysqldb://'
 
-    def make_tunnel(self) -> object:
+    def make_pyanywhere_ssh_tunnel(self) -> object:
         self.gPaTunnel = sshtunnel.SSHTunnelForwarder(
             (self.arrConnVars['pa']['OIMR']['ssh'])
             , ssh_username=self.arrConnVars['pa']['OIMR']['userName']
@@ -127,7 +145,7 @@ class PyAnywhereAPI():
         self.gPaTunnel.start()
         TODO: "MAKE A START/STOP TUNNEL INTERFACE TO CLEAN THINGS UP"
 
-    def make_connection_str(self):
+    def make_pyanywhere_msyql_engine_string(self):
         # now we capture the tunnel local bind port and use with sqlalchemy mysql dialect and the local port to create a connection string
         self.arrConnVars['pa']['OIMR']['localBind'] = str(self.gPaTunnel.local_bind_port)
         # ok have all the pieces to make a sqlAlchemy acceptable connection string
@@ -139,9 +157,9 @@ class PyAnywhereAPI():
             self.arrConnVars['pa']['OIMR']['localBind'] + "/" + \
             self.arrConnVars['pa']['OIMR']['dbName']
 
-    def make_connection(self):
+    def make_pyanywhere_mysql_connection(self):
         # call make oimr$OIMR database connection string to correctly populate value of self.arrConn['pa']['OIMR']['connection']
-        self.make_connection_str()
+        self.make_pyanywhere_msyql_engine_string()
         # use make_connection_str results to fire up a sqlAlchemy connection into PythonAnywhere using mysql dialect
         self.gPaEngine = sa.create_engine(self.arrConnVars['pa']['OIMR']['connection'], pool_recycle=280)
         # TODO: MAKE A CONNECTION POOL HERE FOR VAROUS HOOKS INTO ENGINE
@@ -150,17 +168,17 @@ class PyAnywhereAPI():
         self.gPaMysqlConn.begin()
 
         metadata = sa.MetaData(bind=self.gPaMysqlConn)
-        self.mysqlLogTable = sa.Table('oimr_logging', metadata,
-                                      sa.Column('recno', sa.Integer, primary_key=True),
-                                      sa.Column('log_level', sa.VARCHAR),
-                                      sa.Column('module', sa.VARCHAR, primary_key=True),
-                                      sa.Column('method', sa.VARCHAR, primary_key=True),
-                                      sa.Column('line_num', sa.Integer, primary_key=True),
-                                      sa.Column('mess_date', sa.DATETIME),
-                                      sa.Column('message', sa.VARCHAR)
-                                      )
-        self.make_log_entry("Info", "PythonAnywhereAPI", "make_connection",
-                            "Established connection to Mysql database log table", 162)
+        self.mysqlOimrLogTable = sa.Table('oimr_logging', metadata,
+                                          sa.Column('recno', sa.Integer, primary_key=True),
+                                          sa.Column('log_level', sa.VARCHAR),
+                                          sa.Column('module', sa.VARCHAR, primary_key=True),
+                                          sa.Column('method', sa.VARCHAR, primary_key=True),
+                                          sa.Column('line_num', sa.Integer, primary_key=True),
+                                          sa.Column('mess_date', sa.DATETIME),
+                                          sa.Column('message', sa.VARCHAR)
+                                          )
+
+        # self.make_log_info_entry("Info", "PythonAnywhereAPI", "make_connection","Start: Established connection to Mysql database log table", 162)
 
         # return conn, eng, tblOimrLogging
         def close_connection(self, tun, eng, sqlConn):
@@ -181,17 +199,64 @@ class PyAnywhereAPI():
             # TODO: write error code
             print("should we close tunnel or connection?")
 
-    def make_log_entry(self, log_level, module, method, message, err_line=0):
+    def make_log_info_entry(self, log_level, module, method, message, err_line=0):
         timeStampNow = (time.strftime("%Y-%m-%d %I:%M:%S"))
+        exc_type, exc_value, exc_traceback = sys.exc_info()
         recno = None  # recno is the id field and autoincrements. odo can use a None object to
         log_string = [[recno, log_level, module, method, err_line, timeStampNow, message]]
-        logDs = odo.discover(self.mysqlLogTable)
-        odo.odo(log_string, self.mysqlLogTable, dshape=logDs, bind=self.gPaEngine, raise_on_errors=True)
+        logDs = odo.discover(self.mysqlOimrLogTable)
+        odo.odo(log_string, self.mysqlOimrLogTabl, dshape=logDs, bind=self.gPaEngine, raise_on_errors=True)
+
+    def make_log_exception_entry(self):
+        timeStampNow = (time.strftime("%Y-%m-%d %I:%M:%S"))
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        traceback.clear_frames(exc_traceback)
+        gc.collect()
+        eMess1 = {}
+        eMess2 = {}
+        if exc_traceback.tb_next == None:
+            tbE = exc_traceback.tb_frame
+            eMess1 = str(tbE.tb_frame).split(",")
+            eModule1 = eMess1[1]
+            eModule1 = str(eModule1[eModule1.rindex(r'/'):eModule1.rindex('.')]).replace('/', '')
+            eMethod1 = eMess1[3].replace('code ', '').replace(' ', '')
+
+            eLineNo1 = exc_traceback.tb_lineno
+            eLineNo = tbE.tb_lineno
+            eMethod = eMethod1
+            eModule = eModule1
+            eMessage = str(exc_value) + 'error found on ' + eMess1[
+                2] + ' called from ' + eModule1 + '.' + eMethod1 + 'line number: ' + str(eLineNo)
+        else:
+            tbE = exc_traceback.tb_next
+            # tbF = exc_traceback.tb_frame
+            eMess1 = str(exc_traceback.tb_frame).replace('>', '').replace('<', '').split(",")
+            eMess2 = str(tbE.tb_frame).replace('>', '').replace('<', '').split(",")
+            eMethod1 = eMess1[3].replace('code ', '').replace(' ', '')
+            eMethod2 = eMess2[3].replace('code ', '').replace(' ', '')
+            eModule1 = eMess1[1]
+            eModule1 = str(eModule1[eModule1.rindex(r'/'):eModule1.rindex('.')]).replace('/', '')
+            eModule2 = eMess2[1]
+            eModule2 = str(eModule2[eModule2.rindex(r'\\'):eModule2.rindex('.')]).replace('\\', '')
+            eLineNo = tbE.tb_lineno
+            eLineNo1 = exc_traceback.tb_lineno
+            eMessage = str(exc_value) + ' This error found on ' + eMess1[
+                2] + ' called from ' + eModule1 + '.' + eMethod1 + ' line number: ' + str(eLineNo1)
+            eMethod = eMethod2
+            eModule = eModule2
+
+        recno = None  # recno is the id field and autoincrements. odo can use a None object to
+
+        log_string = [[recno, 'DEBUG', eModule, eMethod, eLineNo, timeStampNow, eMessage]]
+        logDs = odo.discover(self.mysqlOimrLogTable)
+        odo.odo(log_string, self.mysqlOimrLogTable, dshape=logDs, bind=self.gPaEngine, raise_on_errors=True)
 
 
 def get_pyAnywhereAPI():
-    db = PyAnywhereAPI('PythonAnywhere_secret.json')
-    return db
+    paMysqlDb = PyAnywhereAPI('PythonAnywhere_secret.json')
+    return paMysqlDb
+
+
 if __name__ == '__main__':
     db = PyAnywhereAPI('PythonAnywhere_secret.json')
     print('done')
