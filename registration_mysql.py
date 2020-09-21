@@ -1,3 +1,4 @@
+#!/usr/bin/python3.7
 import pythonAnywhereConnect as pa
 from pythonAnywhereConnect import PyAnywhereAPI as db
 import courses
