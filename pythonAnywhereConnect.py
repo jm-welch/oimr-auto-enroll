@@ -66,6 +66,7 @@ When imported all connections are made and the log table should be ready for use
 
 """
 import sqlalchemy as sa
+from sqlalchemy.orm import sessionmaker as sm
 import sshtunnel
 import time
 import json
@@ -74,7 +75,7 @@ import odo
 import traceback
 import gc
 import sys
-import string
+import meta_exc
 
 sshtunnel.SSH_TIMEOUT = 5.0
 sshtunnel.TUNNEL_TIMEOUT = 5.0
@@ -120,7 +121,7 @@ class PyAnywhereAPI():
         # and finally expose the mysql log table so that odo can write to it.
         self.make_pyanywhere_mysql_connection()
 
-    def make_arrConnParams(self):
+    def make_arrConnParams(self, reg=None, course=None, class_id=None, classLabel=None):
         # This is multi dimensional so we can use it for other connections to any other databases we may want to set up.
 
         self.arrConnVars['pa']['OIMR']['userName'] = self.userName
@@ -161,14 +162,15 @@ class PyAnywhereAPI():
         # call make oimr$OIMR database connection string to correctly populate value of self.arrConn['pa']['OIMR']['connection']
         self.make_pyanywhere_msyql_engine_string()
         # use make_connection_str results to fire up a sqlAlchemy connection into PythonAnywhere using mysql dialect
-        self.gPaEngine = sa.create_engine(self.arrConnVars['pa']['OIMR']['connection'], pool_recycle=280)
+        self.gPaEngine = sa.create_engine(self.arrConnVars['pa']['OIMR']['connection'], pool_size=20, pool_recycle=280)
         # TODO: MAKE A CONNECTION POOL HERE FOR VAROUS HOOKS INTO ENGINE
-        test = self.gPaEngine.get_execution_options()
-        self.gPaMysqlConn = self.gPaEngine.connect()
-        self.gPaMysqlConn.begin()
 
-        metadata = sa.MetaData(bind=self.gPaMysqlConn)
-        self.mysqlOimrLogTable = sa.Table('oimr_logging', metadata,
+        self.gPaMysqlConn = self.gPaEngine.connect()
+        self.mysql_oimr_metadata = sa.MetaData(bind=self.gPaEngine)
+        self.gPaMysqlConn.begin()
+        # create a configured "Session" class
+        self.Sess_gPaEngine = sa.orm.sessionmaker(bind=self.gPaEngine)
+        self.mysqlOimrLogTable = sa.Table('oimr_logging', self.mysql_oimr_metadata,
                                           sa.Column('recno', sa.Integer, primary_key=True),
                                           sa.Column('log_level', sa.VARCHAR),
                                           sa.Column('module', sa.VARCHAR, primary_key=True),
@@ -178,7 +180,38 @@ class PyAnywhereAPI():
                                           sa.Column('message', sa.VARCHAR)
                                           )
 
-        # self.make_log_info_entry("Info", "PythonAnywhereAPI", "make_connection","Start: Established connection to Mysql database log table", 162)
+        self.ds_mysqlOimrLogTable = odo.discover(self.mysqlOimrLogTable)
+        #  LOG TABLE IS NOW EXPOSED AND CAN START RECIEVING INPUT
+        self.make_log_info_entry("Info", "PythonAnywhereAPI", "make_connection",
+                                 "oimr_logging table connected and available", 186)
+        self.mysqlOimrCourseInvitation = sa.Table('oimr_course_invitation', self.mysql_oimr_metadata,
+                                                  sa.Column('oimr_class_id', sa.VARCHAR, primary_key=True),
+                                                  sa.Column('oimr_class_desc', sa.VARCHAR),
+                                                  sa.Column('google_class_id', sa.VARCHAR),
+                                                  sa.Column('google_invite_name', sa.VARCHAR),
+                                                  sa.Column('google_class_invite', sa.DATETIME),
+                                                  sa.Column('google_class_status', sa.VARCHAR)
+                                                  );
+        self.ds_mysqlOimrCourseInvitation = odo.discover(self.mysqlOimrCourseInvitation)
+        self.make_log_info_entry("Info", "PythonAnywhereAPI", "make_connection",
+                                 "oimr_course_invitation table connected and available", 195)
+
+        self.mysqlOimrCourseRegistration = sa.Table('oimr_course_registration', self.mysql_oimr_metadata,
+                                                    sa.Column('oimr_class_id', sa.VARCHAR, primary_key=True),
+                                                    sa.Column('oimr_id', sa.VARCHAR),
+                                                    sa.Column('student_fullname', sa.VARCHAR),
+                                                    sa.Column('class_symbol', sa.VARCHAR),
+                                                    sa.Column('class_description', sa.VARCHAR),
+                                                    sa.Column('reg_class_Status', sa.VARCHAR),
+                                                    sa.Column('reg_date_created', sa.DATETIME),
+                                                    sa.Column('enroll_class_status', sa.VARCHAR),
+                                                    sa.Column('enroll_class_date', sa.DATETIME),
+                                                    sa.Column('invite_class_status', sa.VARCHAR),
+                                                    sa.Column('invite_class_date', sa.DATETIME),
+                                                    sa.Column('terms_status', sa.VARCHAR));
+        self.ds_mysqlOimrCourseRegistration = odo.discover(self.mysqlOimrCourseRegistration)
+        self.make_log_info_entry("Info", "PythonAnywhereAPI", "make_connection",
+                                 "oimr_course_registration table connected and available", 162)
 
         # return conn, eng, tblOimrLogging
         def close_connection(self, tun, eng, sqlConn):
@@ -199,13 +232,40 @@ class PyAnywhereAPI():
             # TODO: write error code
             print("should we close tunnel or connection?")
 
+    def insert_update_mysql_tables(self, theTable, theDataShape, theData):
+        try:
+
+            # lets get the dataShape for the table
+            dataDict = self.ds_mysqlOimrCourseRegistration.name
+            # suppose the database has been restarted.
+            self.gPaEngine.get_execution_options()
+            self.gPaEngine.execute("SELECT * FROM " + self.ds_mysqlOimrCourseRegistration.name)
+            self.gPaMysqlConn.close()
+        except meta_exc.DBAPIError as e:
+            # an exception is raised, Connection is invalidated.
+            if e.connection_invalidated:
+                print("Connection was invalidated!")
+
+            # after the invalidate event, a new connection
+            # starts with a new Pool
+
+    def bulk_insert_mysql_tables(self, theTable, theDataShape, theData):
+        try:
+            odo.odo(theData, theTable, dshape=theDataShape, bind=self.gPaEngine, raise_on_errors=True)
+        except:
+            self.make_log_exception_entry()
+            # an exception is raised, Connection is invalidated.
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+
     def make_log_info_entry(self, log_level, module, method, message, err_line=0):
         timeStampNow = (time.strftime("%Y-%m-%d %I:%M:%S"))
         exc_type, exc_value, exc_traceback = sys.exc_info()
+        log_level = 'INFO'
         recno = None  # recno is the id field and autoincrements. odo can use a None object to
         log_string = [[recno, log_level, module, method, err_line, timeStampNow, message]]
         logDs = odo.discover(self.mysqlOimrLogTable)
         odo.odo(log_string, self.mysqlOimrLogTable, dshape=logDs, bind=self.gPaEngine, raise_on_errors=True)
+
 
     def make_log_exception_entry(self):
         timeStampNow = (time.strftime("%Y-%m-%d %I:%M:%S"))
@@ -247,7 +307,6 @@ class PyAnywhereAPI():
             eModule = eModule2
 
         recno = None  # recno is the id field and autoincrements. odo can use a None object to
-
         log_string = [[recno, 'DEBUG', eModule, eMethod, eLineNo, timeStampNow, eMessage]]
         logDs = odo.discover(self.mysqlOimrLogTable)
         odo.odo(log_string, self.mysqlOimrLogTable, dshape=logDs, bind=self.gPaEngine, raise_on_errors=True)
@@ -261,4 +320,4 @@ def get_pyAnywhereAPI():
 if __name__ == '__main__':
     db = PyAnywhereAPI('PythonAnywhere_secret.json')
     print('done')
-    db.make_log_entry('debug', 'oimrConnect', 'main', 'this is a test of an outside call to log', 191)
+    db.make_log_info_entry('INFO', 'PythonAnywhereConnect', '__main__', 'PyAnywhereApi Self Instantiated', 191)
