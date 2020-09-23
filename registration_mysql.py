@@ -9,7 +9,8 @@ import datetime
 from collections import UserList, Counter
 import hashlib
 
-oimrDb = pa.get_pyAnywhereAPI()
+dB = pa.get_pyAnywhereAPI()
+dB.make_log_info_entry('INFO', 'registration_mysql', '__main__', 'PyAnywhereApi imported in Registration_mysql', 312)
 
 DATE_FMT = "%Y-%m-%dT%H:%M:%SZ"
 
@@ -208,6 +209,35 @@ class Registrant():
         return hashed_string
 
     @property
+    def mysql_registered_classes(self):
+        """
+        Create a hash of the registrant's full name,
+        date of birth, and email to serve as a unique ID  and class registration
+        """
+        studentRegisteredClasses = []
+        x = 0
+        for c in self.true_fields:
+            if x == 0:
+                if c.get('value') == 'true':
+                    termsAccepted = 'true';
+                else:
+                    termsAccepted = 'false';
+            else:
+                classSymb = str(c.get('label')).split(" ")[0]
+                reg_class_Status = c.get('value')
+                reg_date_created = self.dateCreated.strftime('%Y-%m-%d %H:%M:%S')
+                string_to_hash = self.full_name.lower()
+                string_to_hash += self.get_path('dateOfBirth').get('value')
+                string_to_hash += self.email_addr.lower()
+                string_to_hash += classSymb
+                hashed_string = hashlib.md5(string_to_hash.encode()).hexdigest()
+                studentRegisteredClasses.append(
+                    [hashed_string, self.oimr_id, self.full_name, classSymb, c.get('label'), c.get('value'),
+                     reg_date_created, None, None, None, None, termsAccepted])
+            x = x + 1
+        return studentRegisteredClasses
+
+    @property
     def full_name(self):
         fname = self.get_path('name.first').get('value')
         lname = self.get_path('name.last').get('value')
@@ -372,19 +402,59 @@ class RegFoxAPI():
         return registrants
 
 
+def registrantClassAssignments(rData):
+    # iterate the true_fileds for each registrant and get unique values for oimr class
+    studentResisteration = []
+    for student in rData:
+        for classRegistration in student.mysql_registered_classes:
+            studentResisteration.append(classRegistration)
+    dB.bulk_insert_mysql_tables(dB.mysqlOimrCourseRegistration, dB.ds_mysqlOimrCourseRegistration, studentResisteration)
+
+
 def makeRegistrationList(secretFile, **kwargs):
     try:
-        oimrDb.make_log_info_entry('INFO', 'registration-mysql', 'makeRegistration', 'Starting RegfoxApi', 377)
+        dB.make_log_info_entry('INFO', 'registration-mysql', 'makeRegistration', 'Starting RegfoxApi', 377)
     except Exception:
         # make log exception calls sys.exc_info() so all the error capture is done in pythonAnywhereConnect
-        oimrDb.make_log_exception_entry()
+        dB.make_log_exception_entry()
 
     api = RegFoxAPI(secretFile)
     registrants = RegistrantList(api.get_registrants(**kwargs))
+
     return api, registrants
-
-
 if __name__ == '__main__':
     api, registrants = makeRegistrationList('regfox_secret.json')
+    registrantClassAssignments(registrants.data)
+
     print('done')
     # registrants.print_report()
+"""
+    @property
+    def mysql_student_registration(self):
+        mysql_student_registration = []
+        for c in self.oimr_registrant_class_ids:
+            mysql_rec = [c,self.oimr_id,self.full_name,c.get('label'),c.get('value')]
+            self.mysql_student_registration.append(mysql_rec)
+
+        return mysql_student_registration
+
+    @property
+    def oimr_registrant_class_ids(self):
+        
+        Create a hash of the registrant's full name,
+        date of birth, and email to serve as a unique ID for a student's class registration
+        also make a mysql acceptable dictionary for loading by odo.
+
+
+        oimr_registrant_class_ids = []
+        for c in self.true_fields:
+            string_to_hash = self.full_name.lower()
+            string_to_hash += self.get_path('dateOfBirth').get('value')
+            string_to_hash += self.email_addr.lower()
+            string_to_hash += c.get('label')
+            hashed_string = hashlib.md5(string_to_hash.encode()).hexdigest()
+            oimr_registrant_class_ids.append(hashed_string)
+
+        return oimr_registrant_class_ids
+
+    """
