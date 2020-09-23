@@ -405,9 +405,11 @@ class RegFoxAPI():
 def registrantClassAssignments(rData):
     # iterate the true_fileds for each registrant and get unique values for oimr class
     studentResisteration = []
+    # TODO: FILTER REGISTRANTS BY DATE? DEPENDS ON HOW WE GET A HANDLE ON ANY UPDATE DATES FROM REGFOX. NOW I JUST GET DATE CREATED.
     for student in rData:
         for classRegistration in student.mysql_registered_classes:
             studentResisteration.append(classRegistration)
+    #TODO: THIS HAS BEEN RUN ONCE ALREADY TRUNCATE THE EXISTING TABLE TO AVOID DUPLICATES ON PRIMARY KEY
     dB.bulk_insert_mysql_tables(dB.mysqlOimrCourseRegistration, dB.ds_mysqlOimrCourseRegistration, studentResisteration)
 
 
