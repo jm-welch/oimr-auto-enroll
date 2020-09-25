@@ -195,20 +195,41 @@ class PyAnywhereAPI():
         self.ds_mysqlOimrCourseInvitation = odo.discover(self.mysqlOimrCourseInvitation)
         self.make_log_info_entry("Info", "PythonAnywhereAPI", "make_connection",
                                  "oimr_course_invitation table connected and available", 195)
+        # TODO: CHECK TO SEE IF WE NEED TO INCLUDE INSTRUCTORS IN THIS TABLE WITH THEIR OWN HASH IDS
+
+        self.mysqlOimrCourseInstructors = sa.Table('oimr_course_instructors', self.mysql_oimr_metadata,
+                                                   sa.Column('class_symbol', sa.VARCHAR),
+                                                   sa.Column('class_description', sa.VARCHAR),
+                                                   sa.Column('class_date_created', sa.DATETIME),
+                                                   sa.Column('inst_fullname', sa.VARCHAR),
+                                                   sa.Column('reg_approval_status', sa.VARCHAR),
+                                                   sa.Column('inst_enroll_status', sa.VARCHAR),
+                                                   sa.Column('inst_enroll_date', sa.VARCHAR),
+                                                   sa.Column('inst_invite_status', sa.VARCHAR),
+                                                   sa.Column('inst_invite_date', sa.VARCHAR),
+                                                   sa.Column('inst_oimr_id', sa.VARCHAR),
+                                                   sa.Column('inst_class_id', sa.VARCHAR, primary_key=True));
+        self.ds_mysqlOimrCourseInstructors = odo.discover(self.mysqlOimrCourseInstructors)
 
         self.mysqlOimrCourseRegistration = sa.Table('oimr_course_registration', self.mysql_oimr_metadata,
                                                     sa.Column('oimr_class_id', sa.VARCHAR, primary_key=True),
-                                                    sa.Column('oimr_id', sa.VARCHAR),
-                                                    sa.Column('student_fullname', sa.VARCHAR),
                                                     sa.Column('class_symbol', sa.VARCHAR),
                                                     sa.Column('class_description', sa.VARCHAR),
+                                                    sa.Column('class_instructor', sa.VARCHAR),
+                                                    sa.Column('reg_fullname', sa.VARCHAR),
+                                                    sa.Column('reg_email', sa.VARCHAR),
+                                                    sa.Column('reg_phone', sa.VARCHAR),
+                                                    sa.Column('reg_role', sa.VARCHAR),
                                                     sa.Column('reg_class_Status', sa.VARCHAR),
                                                     sa.Column('reg_date_created', sa.DATETIME),
-                                                    sa.Column('enroll_class_status', sa.VARCHAR),
-                                                    sa.Column('enroll_class_date', sa.DATETIME),
-                                                    sa.Column('invite_class_status', sa.VARCHAR),
-                                                    sa.Column('invite_class_date', sa.DATETIME),
-                                                    sa.Column('terms_status', sa.VARCHAR));
+                                                    sa.Column('reg_approval_status', sa.VARCHAR),
+                                                    sa.Column('reg_enroll_status', sa.VARCHAR),
+                                                    sa.Column('reg_enroll_date', sa.DATETIME),
+                                                    sa.Column('reg_invite_status', sa.VARCHAR),
+                                                    sa.Column('reg_invite_date', sa.DATETIME),
+                                                    sa.Column('registration_status', sa.VARCHAR),
+                                                    sa.Column('oimr_id', sa.VARCHAR));
+
         self.ds_mysqlOimrCourseRegistration = odo.discover(self.mysqlOimrCourseRegistration)
         self.make_log_info_entry("Info", "PythonAnywhereAPI", "make_connection",
                                  "oimr_course_registration table connected and available", 162)
@@ -234,9 +255,9 @@ class PyAnywhereAPI():
 
     def insert_update_mysql_tables(self, theTable, theDataShape, theData):
         try:
-
             # lets get the dataShape for the table
-            dataDict = self.ds_mysqlOimrCourseRegistration.name
+            dataDict = theDataShape
+
             # suppose the database has been restarted.
             self.gPaEngine.get_execution_options()
             self.gPaEngine.execute("SELECT * FROM " + self.ds_mysqlOimrCourseRegistration.name)
