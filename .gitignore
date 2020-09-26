@@ -2,9 +2,12 @@
 *.pyc
 *.lock
 *.pickle
+__pycache__/*
+.ipynb_checkpoints/*
 
 #VSCode
 .vscode/*
-
+#idea
+.idea
 #SEKRITS
 *secret.json
