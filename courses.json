@@ -1,218 +1,98 @@
 {
   "BOF": {
     "instructor": "Cara Wildman",
-    "name": "Bodhrán (Fundamentals)",
-    "liveQA": {
-      "BOFL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Bodhrán (Fundamentals)"
   },
   "BOI": {
     "instructor": "Paddy League",
-    "name": "Bodhrán (Intermediate & Advanced)",
-    "liveQA": {
-      "BOIL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Bodhrán (Intermediate & Advanced)"
   },
   "BZK": {
     "instructor": "Eoin O’Neill",
-    "name": "Bouzouki (All Levels)",
-    "liveQA": {
-      "BZKL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Bouzouki (All Levels)"
   },
   "BOX": {
     "instructor": "Colm Gannon",
-    "name": "Button Accordion (All Levels)",
-    "liveQA": {
-      "BOXL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Button Accordion (All Levels)"
   },
   "COF": {
     "instructor": "Kelly Gannon",
-    "name": "Concertina (Fundamentals)",
-    "liveQA": {
-      "COFL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Concertina (Fundamentals)"
   },
   "COI": {
     "instructor": "Cormac Begley",
-    "name": "Concertina (Intermediate & Advanced)",
-    "liveQA": {
-      "COIL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Concertina (Intermediate & Advanced)"
   },
   "DAN": {
     "instructor": "Jaclyn O'Riley",
-    "name": "Dancing (Sean-nós)",
-    "liveQA": {
-      "DANL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Dancing (Sean-nós)"
   },
   "FIF": {
     "instructor": "Chris Buckley",
-    "name": "Fiddle (Fundamentals)",
-    "liveQA": {
-      "FIFL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Fiddle (Fundamentals)"
   },
   "FIL": {
     "instructor": "Liz Doherty",
-    "name": "Fiddle (Intermediate)",
-    "liveQA": {
-      "FILL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Fiddle (Intermediate)"
   },
   "FIE": {
     "instructor": "Eimear Arkins",
-    "name": "Fiddle (Intermediate)",
-    "liveQA": {
-      "FIEL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Fiddle (Intermediate)"
   },
   "FIM": {
     "instructor": "Manus McGuire",
-    "name": "Fiddle (Intermediate)",
-    "liveQA": {
-      "FIML1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Fiddle (Intermediate)"
   },
   "FIA": {
     "instructor": "Zoë Connway",
-    "name": "Fiddle (Advanced)",
-    "liveQA": {
-      "FIAL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Fiddle (Advanced)"
   },
   "FLI": {
     "instructor": "Harry Bradley",
-    "name": "Flute (Intermediate & Advanced)",
-    "liveQA": {
-      "FLIL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Flute (Intermediate & Advanced)"
   },
   "GUF": {
     "instructor": "Jeff Moore",
-    "name": "Guitar (Fundamentals)",
-    "liveQA": {
-      "GUFL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Guitar (Fundamentals)"
   },
   "GUI": {
     "instructor": "Jim Murray",
-    "name": "Guitar (Intermediate & Advanced)",
-    "liveQA": {
-      "GUIL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Guitar (Intermediate & Advanced)"
   },
   "HRP": {
     "instructor": "Eileen Gannon",
-    "name": "Harp (All Levels)",
-    "liveQA": {
-      "HRPL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Harp (All Levels)"
   },
   "MBF": {
     "instructor": "John Morrow",
-    "name": "Mandolin/Banjo (Fundamentals)",
-    "liveQA": {
-      "MBFL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Mandolin/Banjo (Fundamentals)"
   },
   "MAI": {
     "instructor": "Brian McGillicuddy",
-    "name": "Mandolin (Intermediate & Advanced)",
-    "liveQA": {
-      "MAIL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Mandolin (Intermediate & Advanced)"
   },
   "PIA": {
     "instructor": "Mirella Murray",
-    "name": "Piano Accordion (All Levels)",
-    "liveQA": {
-      "PIAL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Piano Accordion (All Levels)"
   },
   "SNG": {
     "instructor": "Liz Hanley",
-    "name": "Singing (All Levels)",
-    "liveQA": {
-      "SNGL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Singing (All Levels)"
   },
   "TBI": {
     "instructor": "Gerry O’Connor",
-    "name": "Tenor Banjo (Intermediate & Advanced)",
-    "liveQA": {
-      "TBIL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Tenor Banjo (Intermediate & Advanced)"
   },
   "UIL": {
     "instructor": "Joey Abarta",
-    "name": "Uilleann Pipes",
-    "liveQA": {
-      "UILL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Uilleann Pipes"
   },
   "WHI": {
     "instructor": "Joanie Madden",
-    "name": "Whistle (Intermediate & Advanced)",
-    "liveQA": {
-      "WHIL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Whistle (Intermediate & Advanced)"
   },
   "WFF": {
     "instructor": "L.E. McCullough",
-    "name": "Whistle/Flute (Fundamentals)",
-    "liveQA": {
-      "WFFL1": null
-    },
-    "classroomId": null,
-    "recordedQA": null
+    "name": "Whistle/Flute (Fundamentals)"
   }
 }
