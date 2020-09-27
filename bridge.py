@@ -11,6 +11,7 @@ import registration
 import enrollment
 import courses
 import logging
+import json
 from slack import WebClient
 from slack.errors import SlackApiError
 
@@ -20,7 +21,10 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)s (%(module)s:%(funcName)s:%(lineno)d) - %(msg)s'
 )
 
-slack_client = WebClient(token='xoxb-1253415920193-1345990559841-PeNQQpBrphfqPbhxhNXZbYEJ')
+with open('slack_secret.json', 'r') as tokenfile: slackauth = json.load(tokenfile)
+logging.debug(slackauth)
+
+slack_client = WebClient(**slackauth)
 
 def post_to_slack(message, channel='G01BV8478D7'):
     """
