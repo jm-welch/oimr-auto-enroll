@@ -59,7 +59,6 @@ class RegistrantList(UserList):
 
         return result
 
-
     def duplicate_registrations(self):
         dupe_ids = Counter(r.oimr_id for r in self.data)
         dupe_ids = [x for x in dupe_ids if dupe_ids[x] > 1]
@@ -74,7 +73,54 @@ class RegistrantList(UserList):
                 'Extras      : {}'.format(d.extras)
             ])+'\n')
 
-    def print_report(self):
+    @property
+    def country_count(self):
+        return Counter([r.get_path('address.country').get('value') for r in self.data])
+
+    @property
+    def income(self):
+        total = sum([r.total for r in self.data])
+        donations = sum([r.donation for r in self.data])
+        registrations = total - donations
+
+        result = {
+            'registrations': registrations,
+            'donations': donations,
+            'total': total
+        }
+
+        return result
+
+    @property
+    def age_breakdown(self):
+        age_ranges = (
+            (12, 17),
+            (18, 29),
+            (30, 39),
+            (40, 49),
+            (50, 59),
+            (60, 69),
+            (70, 79),
+            (80, 89)
+        )
+
+        def age_to_range(age):
+            if age > 89:
+                return '90+'
+
+            for b, t in age_ranges:
+                if b <= age <= t:
+                    return '{}-{}'.format(b, t)
+
+        result = Counter({'{}-{}'.format(*x): 0 for x in age_ranges})
+        result.update({'80+': 0})
+
+        for r in self.data:
+            result.update([age_to_range(r.age)])
+
+        return result
+
+    def print_report(self, include_age=False, include_courses=False, include_qa=False):
         fmt = '{:^8} | {}'
         line_fmt = '{0:-^8} | {0:-^68}'
 
@@ -87,28 +133,40 @@ class RegistrantList(UserList):
         report = []
         report.append('Report time: {}'.format(datetime.datetime.now().isoformat()))
         report.append('\nTotal registrants: {} ({} unique, {} duplicates)'.format(*counts))
-        report.append('Age range: {}-{}'.format(min(r.age for r in self.data), max(r.age for r in self.data)))
-        report.append('Total Donations: {:.02f}\n'.format(sum(r.donation for r in self.data)))
 
-        # Core Courses
-        report.append('Core Course Registration\n{}\n'.format('='*24))
-        report.append('Count: {}\n'.format(sum(self.core_course_count().values())))
+        # Finance
+        report.append('\nFinances\n========')
+        report.append('Total from registrations : ${registrations:.02f}\nTotal from donations     : ${donations:.02f}\nTotal income before fees : ${total:.02f}\n'.format(**self.income))
 
-        report.append(fmt.format('Students', 'Course'))
-        report.append(line_fmt.format('-'))
-        for course, count in self.core_course_count().items():
-            report.append(fmt.format(count, '({}) '.format(course) + courses.course_title(course)))
+        if include_age:
+            # Age
+            report.append('\nAge Breakdown\n=============')
+            report.append('Age range: {}-{}\n'.format(min(r.age for r in self.data), max(r.age for r in self.data)))
+            for data in self.age_breakdown.items():
+                report.append('{:6}: {}'.format(*data))
+            report.append('\n\n')
 
-        report.append('\n\n')
+        if include_courses:
+            # Core Courses
+            report.append('Core Course Registration\n{}\n'.format('='*24))
+            report.append('Count: {}\n'.format(sum(self.core_course_count().values())))
 
-        # QA Forums
-        report.append("QA Forum Signups\n{}\n".format('='*15))
-        report.append('Count: {}\n'.format(sum(self.live_qa_count().values())))
+            report.append(fmt.format('Students', 'Course'))
+            report.append(line_fmt.format('-'))
+            for course, count in self.core_course_count().items():
+                report.append(fmt.format(count, '({}) '.format(course) + courses.course_title(course)))
 
-        report.append(fmt.format('Students', 'Course'))
-        report.append(line_fmt.format('-'))
-        for course, count in self.live_qa_count().items():
-            report.append(fmt.format(count, '({}) '.format(course) + courses.course_title(course[:3])))
+            report.append('\n\n')
+
+        if include_qa:
+            # QA Forums
+            report.append("QA Forum Signups\n{}\n".format('='*15))
+            report.append('Count: {}\n'.format(sum(self.live_qa_count().values())))
+
+            report.append(fmt.format('Students', 'Course'))
+            report.append(line_fmt.format('-'))
+            for course, count in self.live_qa_count().items():
+                report.append(fmt.format(count, '({}) '.format(course) + courses.course_title(course[:3])))
 
         for line in report:
             print(line)
@@ -122,9 +180,10 @@ class Registrant():
     def __init__(self, raw_data):
         self._raw = raw_data
         self.customer_id = self._raw.get('orderCustomerId', '')
-        self.registrationId = self._raw.get('orderId', '')
+        self.registrationId = self._raw.get('orderDisplayId', '')
         self.orderNumber = self._raw.get('orderNumber', '')
         self.dateCreated = datetime.datetime.strptime(self._raw.get('dateCreated'), DATE_FMT)
+        self.total = float(self._raw.get('total', 0))
 
     @property
     def oimr_id(self):
