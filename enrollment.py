@@ -25,7 +25,7 @@ SCOPES = [
 
 cred_file = 'google_secret.json'
 
-class API():
+class GoogleAPI():
     def __init__(self):
         self.auth()
 
@@ -90,7 +90,7 @@ class API():
 
 
 def get_GoogleApi():
-    api = API()
+    api = GoogleAPI()
     return api
 
 
