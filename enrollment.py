@@ -7,11 +7,8 @@ from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import logging
-#import pythonAnywhereConnect as pa
 
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
-
-#oimrDb = pa.get_pyAnywhereAPI()
 
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = [
@@ -23,13 +20,11 @@ SCOPES = [
     'https://www.googleapis.com/auth/classroom.profile.photos'
 ]
 
-cred_file = 'google_secret.json'
-
 class GoogleAPI():
-    def __init__(self):
-        self.auth()
+    def __init__(self, client_config=None):
+        self.auth(client_config)
 
-    def auth(self, scopes=SCOPES):
+    def auth(self, client_config, scopes=SCOPES):
         # Perform auth and return service
         
         creds = None
@@ -44,8 +39,8 @@ class GoogleAPI():
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    cred_file, scopes)
+                flow = InstalledAppFlow.from_client_config(
+                    client_config, scopes)
                 creds = flow.run_local_server(port=0)
             # Save the credentials for the next run
             with open('token.pickle', 'wb') as token:
@@ -53,7 +48,6 @@ class GoogleAPI():
 
         self.dir_svc = build('admin', 'directory_v1', credentials=creds)
         self.cls_svc = build('classroom', 'v1', credentials=creds)
-        
 
     def add_group_member(self, group_id, email):
         # Add a member to a group in the domain
@@ -65,7 +59,6 @@ class GoogleAPI():
         }
 
         result = self.dir_svc.members().insert(**args)
-
 
     def list_courses(self):
         # List all Classrooms in the domain

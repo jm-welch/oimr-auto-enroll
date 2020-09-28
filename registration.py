@@ -180,7 +180,7 @@ class Registrant():
     def __init__(self, raw_data):
         self._raw = raw_data
         self.customer_id = self._raw.get('orderCustomerId', '')
-        self.registrationId = self._raw.get('orderDisplayId', '')
+        self.registrationId = self._raw.get('displayId', '')
         self.orderNumber = self._raw.get('orderNumber', '')
         self.dateCreated = datetime.datetime.strptime(self._raw.get('dateCreated'), DATE_FMT)
         self.total = float(self._raw.get('total', 0))

@@ -17,10 +17,12 @@ from slack.errors import SlackApiError
 
 logging.basicConfig(
     level=logging.DEBUG,
-    #filename='bridge.log',
+    filename='bridge.log',
     format='%(asctime)s %(levelname)s (%(module)s:%(funcName)s:%(lineno)d) - %(msg)s'
 )
 
+with open('google_secret.json', 'r') as infile: client_config = json.load(infile)
+with open('regfox_secret.json', 'r') as infile: regfox_auth = json.load(infile)
 with open('slack_secret.json', 'r') as tokenfile: slackauth = json.load(tokenfile)
 logging.debug(slackauth)
 
@@ -84,15 +86,21 @@ def enroll_student(registrant, course, google_api):
     try:
         if registrant.email_addr != 'jeremy.m.welch@gmail.com': raise(Exception)
         result = google_api.add_student(courseId=alias, studentEmail=registrant.email_addr)
+        logging.debug(result)
         #result = 'enrollment.add_student(courseId={}, studentEmail={})'.format(alias, registrant.email_addr)
+    except enrollment.HttpError as e:
+        headers, details = e.args
+        details = json.loads(details.decode())
+        msg = 'Encountered error enrolling {!r} to course {} - {}'.format(registrant, course, details['error']['status'])
+        logging.exception(msg)
+        post_to_slack(':warning: ' + msg)
+        return False
+    except:
+        logging.exception('Encountered an unexpected error')
+    else:
         logging.info('{!r} enrolled in course {} with studentId {}'.format(registrant, course, result['id']))
         # DB insert to add student to students table with studentId from response
         return True
-    except Exception as e:
-        msg = 'Encountered error enrolling {!r} to course {}'.format(registrant, course)
-        logging.exception(msg)
-        post_to_slack(':warning:' + msg)
-        return False
 
 def generate_change_list(registrants):
     """
@@ -137,7 +145,7 @@ def main(regfox_api, google_api):
 
     # Deal with The Commons
     enroll_in_commons = make_commons_enrollment_list(registrants)
-    summary.append('* {} students to enroll in commons'.format(len(enroll_in_commons)))
+    summary.append('* {} student(s) to enroll in commons'.format(len(enroll_in_commons)))
     if enroll_in_commons:
         status = [0, 0]
         for student in enroll_in_commons:
@@ -158,6 +166,6 @@ def main(regfox_api, google_api):
 
 if __name__ == '__main__':
     post_to_slack(':sparkles: Bridge script started :sparkles:')
-    regfox_api = registration.RegFoxAPI('regfox_secret.json')
-    google_api = enrollment.API()
+    regfox_api = registration.RegFoxAPI(**regfox_auth)
+    google_api = enrollment.GoogleAPI(client_config)
     main(regfox_api, google_api)
