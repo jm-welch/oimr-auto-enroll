@@ -4,10 +4,16 @@
 *.pickle
 __pycache__/*
 .ipynb_checkpoints/*
+*.ipynb
 
 #VSCode
 .vscode/*
+
 #idea
 .idea
+
 #SEKRITS
 *secret.json
+
+#Script/logs
+bridge.log
