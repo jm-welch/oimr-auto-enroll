@@ -6,6 +6,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+import json
 import logging
 
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
@@ -20,11 +21,15 @@ SCOPES = [
     'https://www.googleapis.com/auth/classroom.profile.photos'
 ]
 
+def course_alias(courseId):
+    """ Take a courseId and return the domain alias. Ex: 'BZK' -> 'd:BZK' """
+    return 'd:' + courseId
+
 class GoogleAPI():
     def __init__(self, client_config=None):
         self.auth(client_config)
 
-    def auth(self, client_config, scopes=SCOPES):
+    def auth(self, client_config=None, scopes=SCOPES):
         # Perform auth and return service
         
         creds = None
@@ -71,6 +76,26 @@ class GoogleAPI():
         user = self.cls_svc.userProfiles().get(userId=u_id).execute()
         return user
 
+    def create_course(self, body):
+        """ Create course with body """
+        # API Ref: http://googleapis.github.io/google-api-python-client/docs/dyn/classroom_v1.courses.html#create
+
+        try:
+            course = self.cls_svc.courses().create(body=body).execute()
+        except HttpError as e:
+            headers, details = e.args
+            details = json.loads(details.decode())
+            logging.exception('Error creating course {} - {}'.format(body.get('id', body), details['error'].get('status')))
+            course = None
+        finally:
+            return course
+
+    def remove_course(self, courseAlias):
+        try:
+            self.cls_svc.courses().delete(id=courseAlias).execute()
+        except:
+            pass
+
     def add_student(self, courseId, studentEmail, role='STUDENT'):
         # Invite a student to join a Classroom
         body = {
@@ -80,6 +105,28 @@ class GoogleAPI():
         }
         enrollment = self.cls_svc.invitations().create(body=body).execute()
         return enrollment
+
+    def add_teacher(self, courseId, teacherEmail):
+        # Add a teacher
+        
+        courseAlias = 'd:'+courseId
+
+        body = {
+            'userId': teacherEmail
+        }
+
+        try:
+            result = self.cls_svc.courses().teachers().create(courseId=courseAlias, body=body).execute()
+        except HttpError as e:
+            headers, details = e.args
+            details = json.loads(details.decode())
+            logging.exception('Error adding teacher {} to course {} - {}'.format(teacherEmail, courseId, details['error'].get('status')))
+            result = None
+        finally:
+            return result
+        
+        
+
 
 
 def get_GoogleApi():
