@@ -1,98 +1,122 @@
 {
   "BOF": {
     "instructor": "Cara Wildman",
-    "name": "Bodhrán (Fundamentals)"
+    "name": "Bodhrán (Fundamentals)",
+    "ta": "Sarah Rose"
   },
   "BOI": {
     "instructor": "Paddy League",
-    "name": "Bodhrán (Intermediate & Advanced)"
+    "name": "Bodhrán (Intermediate & Advanced)",
+    "ta": "Jeremy Welch"
   },
   "BZK": {
-    "instructor": "Eoin O’Neill",
-    "name": "Bouzouki (All Levels)"
+    "instructor": "Eoin O'Neill",
+    "name": "Bouzouki (All Levels)",
+    "ta": "Jeremy Welch"
   },
   "BOX": {
     "instructor": "Colm Gannon",
-    "name": "Button Accordion (All Levels)"
+    "name": "Button Accordion (All Levels)",
+    "ta": "Lisha Haughton"
   },
   "COF": {
     "instructor": "Kelly Gannon",
-    "name": "Concertina (Fundamentals)"
+    "name": "Concertina (Fundamentals)",
+    "ta": "Brian Shaw"
   },
   "COI": {
     "instructor": "Cormac Begley",
-    "name": "Concertina (Intermediate & Advanced)"
+    "name": "Concertina (Intermediate & Advanced)",
+    "ta": "Sarah Rose"
   },
   "DAN": {
     "instructor": "Jaclyn O'Riley",
-    "name": "Dancing (Sean-nós)"
+    "name": "Dancing (Sean-nós)",
+    "ta": "Lisha Haughton"
   },
   "FIF": {
     "instructor": "Chris Buckley",
-    "name": "Fiddle (Fundamentals)"
+    "name": "Fiddle (Fundamentals)",
+    "ta": "Lisha Haughton"
   },
   "FIL": {
     "instructor": "Liz Doherty",
-    "name": "Fiddle (Intermediate)"
+    "name": "Fiddle (Intermediate)",
+    "ta": "Sarah Rose"
   },
   "FIE": {
     "instructor": "Eimear Arkins",
-    "name": "Fiddle (Intermediate)"
+    "name": "Fiddle (Intermediate)",
+    "ta": "Lisha Haughton"
   },
   "FIM": {
     "instructor": "Manus McGuire",
-    "name": "Fiddle (Intermediate)"
+    "name": "Fiddle (Intermediate)",
+    "ta": "Sarah Rose"
   },
   "FIA": {
     "instructor": "Zoë Connway",
-    "name": "Fiddle (Advanced)"
+    "name": "Fiddle (Advanced)",
+    "ta": "Sarah Rose"
   },
   "FLI": {
     "instructor": "Harry Bradley",
-    "name": "Flute (Intermediate & Advanced)"
+    "name": "Flute (Intermediate & Advanced)",
+    "ta": "Rick Roberts"
   },
   "GUF": {
     "instructor": "Jeff Moore",
-    "name": "Guitar (Fundamentals)"
+    "name": "Guitar (Fundamentals)",
+    "ta": "Jeremy Welch"
   },
   "GUI": {
     "instructor": "Jim Murray",
-    "name": "Guitar (Intermediate & Advanced)"
+    "name": "Guitar (Intermediate & Advanced)",
+    "ta": "Jeremy Welch"
   },
   "HRP": {
     "instructor": "Eileen Gannon",
-    "name": "Harp (All Levels)"
+    "name": "Harp (All Levels)",
+    "ta": "Lisha Haughton"
   },
   "MBF": {
     "instructor": "John Morrow",
-    "name": "Mandolin/Banjo (Fundamentals)"
+    "name": "Mandolin/Banjo (Fundamentals)",
+    "ta": "Brian Shaw"
   },
   "MAI": {
     "instructor": "Brian McGillicuddy",
-    "name": "Mandolin (Intermediate & Advanced)"
+    "name": "Mandolin (Intermediate & Advanced)",
+    "ta": "Brian Shaw"
   },
   "PIA": {
     "instructor": "Mirella Murray",
-    "name": "Piano Accordion (All Levels)"
+    "name": "Piano Accordion (All Levels)",
+    "ta": "Lisha Haughton"
   },
   "SNG": {
     "instructor": "Liz Hanley",
-    "name": "Singing (All Levels)"
+    "name": "Singing (All Levels)",
+    "ta": "Jeremy Welch"
   },
   "TBI": {
-    "instructor": "Gerry O’Connor",
-    "name": "Tenor Banjo (Intermediate & Advanced)"
+    "instructor": "Gerry O'Connor",
+    "name": "Tenor Banjo (Intermediate & Advanced)",
+    "ta": "Brian Shaw"
   },
   "UIL": {
     "instructor": "Joey Abarta",
-    "name": "Uilleann Pipes"
+    "name": "Uilleann Pipes",
+    "ta": "John Liestman"
   },
   "WHI": {
     "instructor": "Joanie Madden",
-    "name": "Whistle (Intermediate & Advanced)"
+    "name": "Whistle (Intermediate & Advanced)",
+    "ta": "Rick Roberts"
   },
   "WFF": {
     "instructor": "L.E. McCullough",
-    "name": "Whistle/Flute (Fundamentals)"
+    "name": "Whistle/Flute (Fundamentals)",
+    "ta": "Lisha Haughton"
   }
 }
