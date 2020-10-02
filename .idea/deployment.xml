@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" serverName="pythonanywhere-oimr" uploadOnCheckin="917dc23b-341d-4bfe-9883-8c815eb4aa65" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <serverData>
+      <paths name="pythonAnywhere-local library">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/.local/lib/python3.7/site-packages" local="$PROJECT_DIR$/../../../../Program Files/Python37/Lib/site-packages" web="/.local/lib/python3.7/site-packages" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="pythonanywhere-oimr">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/oimr-auto-enroll" local="$PROJECT_DIR$" web="/files/home/oimr/oimr-auto-enroll" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/.idea" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+    </serverData>
+    <option name="myUploadOnCheckinName" value="pythonanywhere-oimr" />
+  </component>
+</project>

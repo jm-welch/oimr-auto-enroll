@@ -1,3 +1,6 @@
+#!/usr/bin/python3.7
+import pythonAnywhereConnect as pa
+from pythonAnywhereConnect import PyAnywhereAPI as db
 import courses
 import requests
 import re
@@ -6,7 +9,11 @@ import datetime
 from collections import UserList, Counter
 import hashlib
 
+dB = pa.get_pyAnywhereAPI()
+dB.make_log_info_entry('INFO', 'registration_mysql', '__main__', 'PyAnywhereApi imported in Registration_mysql', 312)
+
 DATE_FMT = "%Y-%m-%dT%H:%M:%SZ"
+
 
 class RegistrantList(UserList):
     def __init__(self, data=[]):
@@ -19,20 +26,13 @@ class RegistrantList(UserList):
     def _raw(self):
         return [Registrant(d) for d in self._data]
 
-    def find_registrant(self, reg_id):
-        result = [r for r in self.data if r.registrationId == reg_id]
-        if result:
-            return result[0]
-        else:
-            return False
-
     @property
     def registrant_count(self):
         """ Count unique registrants, using Registrant.oimr_id as a key """
         return len(set(r.oimr_id for r in self.data))
 
     def validate(self, data):
-        return [d for d in data if d.get('status')=='completed']
+        return [d for d in data if d.get('status') == 'completed']
 
     def core_course_count(self):
         course_count = Counter({c: 0 for c in courses.COURSES})
@@ -78,7 +78,7 @@ class RegistrantList(UserList):
                 'Core Courses: {}'.format(d.core_courses),
                 'QA Forums   : {}'.format(d.qa_forums),
                 'Extras      : {}'.format(d.extras)
-            ])+'\n')
+            ]) + '\n')
 
     @property
     def country_count(self):
@@ -135,7 +135,7 @@ class RegistrantList(UserList):
             len(self.data),
             self.registrant_count,
             len(self.data) - self.registrant_count
-            )
+        )
 
         report = []
         report.append('Report time: {}'.format(datetime.datetime.now().isoformat()))
@@ -143,7 +143,9 @@ class RegistrantList(UserList):
 
         # Finance
         report.append('\nFinances\n========')
-        report.append('Total from registrations : ${registrations:.02f}\nTotal from donations     : ${donations:.02f}\nTotal income before fees : ${total:.02f}\n'.format(**self.income))
+        report.append(
+            'Total from registrations : ${registrations:.02f}\nTotal from donations     : ${donations:.02f}\nTotal income before fees : ${total:.02f}\n'.format(
+                **self.income))
 
         if include_age:
             # Age
@@ -155,7 +157,7 @@ class RegistrantList(UserList):
 
         if include_courses:
             # Core Courses
-            report.append('Core Course Registration\n{}\n'.format('='*24))
+            report.append('Core Course Registration\n{}\n'.format('=' * 24))
             report.append('Count: {}\n'.format(sum(self.core_course_count().values())))
 
             report.append(fmt.format('Students', 'Course'))
@@ -167,7 +169,7 @@ class RegistrantList(UserList):
 
         if include_qa:
             # QA Forums
-            report.append("QA Forum Signups\n{}\n".format('='*15))
+            report.append("QA Forum Signups\n{}\n".format('=' * 15))
             report.append('Count: {}\n'.format(sum(self.live_qa_count().values())))
 
             report.append(fmt.format('Students', 'Course'))
@@ -182,12 +184,14 @@ class RegistrantList(UserList):
 class Registrant():
     course_regex = re.compile('(?:\[)(\w{3})(?:\])')
     qa_regex = re.compile('(?:\[)(\w{3}(?:L|R)\d?)(?:\])')
-    #qarec_regex = re.compile('(?:\[)(\w{3}R)(?:\])')
+
+    # qarec_regex = re.compile('(?:\[)(\w{3}R)(?:\])')
 
     def __init__(self, raw_data):
         self._raw = raw_data
+
         self.customer_id = self._raw.get('orderCustomerId', '')
-        self.registrationId = self._raw.get('displayId', '')
+        self.registrationId = self._raw.get('orderId', '')
         self.orderNumber = self._raw.get('orderNumber', '')
         self.dateCreated = datetime.datetime.strptime(self._raw.get('dateCreated'), DATE_FMT)
         self.total = float(self._raw.get('total', 0))
@@ -205,6 +209,100 @@ class Registrant():
         hashed_string = hashlib.md5(string_to_hash.encode()).hexdigest()
         return hashed_string
 
+    @property
+    def mysql_registered_classes(self):
+        """
+        Create a hash of the registrant's full name,
+        date of birth, and email to serve as a unique ID  and class registration
+        """
+
+        sInfo = pa.multi_dimensions(5, pa.collections.Counter)
+        studentRegisteredClasses = []
+        sInfo[self.oimr_id]['courses'] = [self.core_courses]
+        sInfo[self.oimr_id]['extras'] = [self.extras]
+        sInfo[self.oimr_id]['forums'] = [self.qa_forums]
+        x = 0
+        rec = []
+        reg_attendance_approval = None
+        reg_phone = None
+        reg_class_status = None
+        reg_class_description = None
+        reg_class_instructor = None
+        reg_role = 'Student'
+        reg_full_name = self.full_name
+        registration_status = self.status
+        reg_date_created = self.dateCreated.strftime('%Y-%m-%d %H:%M:%S')
+        reg_email = self.email_addr
+        oimr_id = self.oimr_id
+
+        for fd in self._raw['fieldData'] or []:
+            if fd.get('path') == 'attendanceok':
+                reg_attendance_approval = str(fd.get('value')).lower()
+            if fd.get('path') == 'phone':
+                reg_phone = fd.get('value')
+
+        # if self.core_courses is not None:
+        for cc in self.core_courses or []:
+
+            print(self)
+            sInfo[self.oimr_id]['courses'].append([cc])
+            classSymb = cc
+            reg_date_created = self.dateCreated.strftime('%Y-%m-%d %H:%M:%S')
+            if str(fd.get('label')).find(classSymb) > 0:
+                reg_class_status = fd.get('value')
+                reg_class_instructor = str(fd.get('label')).split(" with ")[1]
+                reg_class_description = str(fd.get('label')).split(" with ")[0].replace(classSymb, '').replace('[',
+                                                                                                               '').replace(
+                    '] ', '')
+            oimr_class_id = self.make_class_hash(classSymb)
+            rec = [oimr_class_id, classSymb, reg_class_description, reg_class_instructor, reg_full_name, reg_email,
+                   reg_phone, reg_role, reg_class_status,
+                   reg_date_created, reg_attendance_approval, None, None, None, None, registration_status, oimr_id]
+            studentRegisteredClasses.append(rec)
+        if not self.qa_forums == None:
+            for qa in self.qa_forums or []:
+                sInfo[self.oimr_id]['courses'].append([qa])
+                classSymb = qa
+
+                for forum in self._raw['fieldData']:
+                    if str(forum.get('label')).find(classSymb) > 0:
+                        reg_class_status = forum.get('value')
+                        reg_class_instructor = str(forum.get('label')).split(" with ")[1]
+                        reg_class_description = str(forum.get('label')).split(" with ")[0].replace(classSymb,
+                                                                                                   '').replace('[',
+                                                                                                               '').replace(
+                            '] ', '')
+                        oimr_class_id = self.make_class_hash(classSymb)
+                        rec = [oimr_class_id, classSymb, reg_class_description, reg_class_instructor, reg_full_name,
+                               reg_email, reg_phone, reg_role, reg_class_status,
+                               reg_date_created, reg_attendance_approval, None, None, None, None, registration_status,
+                               oimr_id]
+                        studentRegisteredClasses.append(rec)
+
+        if self.extras:
+            for fd in self._raw['fieldData'] or []:
+                if str(fd.get('label')).find('Extra') > 0:
+                    classSymb = str(fd.get('label')).lower()
+                    reg_class_status = fd.get('value')
+                    reg_class_instructor = None
+                    reg_class_description = fd.get('path')
+                    oimr_class_id = self.make_class_hash(classSymb)
+                    rec = [oimr_class_id, classSymb, reg_class_description, reg_class_instructor, reg_full_name,
+                           reg_email, reg_phone, reg_role, reg_class_status,
+                           reg_date_created, reg_attendance_approval, None, None, None, None, registration_status,
+                           oimr_id]
+                    studentRegisteredClasses.append(rec)
+
+            x = x + 1
+        return studentRegisteredClasses
+
+    def make_class_hash(self, curclass):
+        string_to_hash = self.full_name.lower()
+        string_to_hash += self.get_path('dateOfBirth').get('value')
+        string_to_hash += self.email_addr.lower()
+        string_to_hash += curclass
+        hashed_string = hashlib.md5(string_to_hash.encode()).hexdigest()
+        return hashed_string
 
     @property
     def full_name(self):
@@ -306,7 +404,7 @@ class RegFoxAPI():
         if inputFile:
             with open(inputFile, 'r') as infile:
                 apiInfo = json.load(infile)
-                #print(apiInfo)
+                # print(apiInfo)
                 self.apiKey = apiInfo['apiKey']
                 self.formId = apiInfo['formId']
         else:
@@ -358,7 +456,7 @@ class RegFoxAPI():
 
         # Check to see if we have more to get
         while r.json().get('hasMore'):
-            #print('getting more...{} of {}'.format(len(r.json()['data']), r.json()['totalResults']))
+            # print('getting more...{} of {}'.format(len(r.json()['data']), r.json()['totalResults']))
             registrants.extend(r.json()['data'])
             lastObj = r.json()['startingAfter']
             params.update({'startingAfter': lastObj})
@@ -371,11 +469,63 @@ class RegFoxAPI():
         return registrants
 
 
+def registrantClassAssignments(rData):
+    # iterate the true_fileds for each registrant and get unique values for oimr class
+    studentRegistrationData = []
+    # TODO: FILTER REGISTRANTS BY DATE? DEPENDS ON HOW WE GET A HANDLE ON ANY UPDATE DATES FROM REGFOX. NOW I JUST GET DATE CREATED.
+    for student in rData:
+        for classRegistration in student.mysql_registered_classes:
+            studentRegistrationData.append(classRegistration)
+    # TODO: THIS HAS BEEN RUN ONCE ALREADY TRUNCATE THE EXISTING TABLE TO AVOID DUPLICATES ON PRIMARY KEY
+
+    dB.bulk_insert_mysql_tables(dB.mysqlOimrCourseRegistration, dB.ds_mysqlOimrCourseRegistration,
+                                studentRegistrationData)
+
+
 def makeRegistrationList(secretFile, **kwargs):
+    try:
+        dB.make_log_info_entry('INFO', 'registration-mysql', 'makeRegistration', 'Starting RegfoxApi', 377)
+    except Exception:
+        # make log exception calls sys.exc_info() so all the error capture is done in pythonAnywhereConnect
+        dB.make_log_exception_entry()
+
     api = RegFoxAPI(secretFile)
     registrants = RegistrantList(api.get_registrants(**kwargs))
-    return api, registrants
 
+    return api, registrants
 if __name__ == '__main__':
     api, registrants = makeRegistrationList('regfox_secret.json')
-    registrants.print_report()
+    registrantClassAssignments(registrants.data)
+
+    print('done')
+    # registrants.print_report()
+"""
+    @property
+    def mysql_student_registration(self):
+        mysql_student_registration = []
+        for c in self.oimr_registrant_class_ids:
+            mysql_rec = [c,self.oimr_id,self.full_name,c.get('label'),c.get('value')]
+            self.mysql_student_registration.append(mysql_rec)
+
+        return mysql_student_registration
+
+    @property
+    def oimr_registrant_class_ids(self):
+        
+        Create a hash of the registrant's full name,
+        date of birth, and email to serve as a unique ID for a student's class registration
+        also make a mysql acceptable dictionary for loading by odo.
+
+
+        oimr_registrant_class_ids = []
+        for c in self.true_fields:
+            string_to_hash = self.full_name.lower()
+            string_to_hash += self.get_path('dateOfBirth').get('value')
+            string_to_hash += self.email_addr.lower()
+            string_to_hash += c.get('label')
+            hashed_string = hashlib.md5(string_to_hash.encode()).hexdigest()
+            oimr_registrant_class_ids.append(hashed_string)
+
+        return oimr_registrant_class_ids
+
+    """

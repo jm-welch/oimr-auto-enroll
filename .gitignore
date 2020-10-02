@@ -19,4 +19,5 @@ archive
 *secret.json
 
 #Script/logs
-bridge.log
+*.log
+

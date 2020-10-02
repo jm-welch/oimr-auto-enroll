@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
+    <data-source source="LOCAL" name="MySQL-PythonAnywhere" uuid="1d2837c1-905b-48d4-97dd-87e1b686354a">
+      <driver-ref>8635eec4-730f-42f1-81d6-cb9067817cd6</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>
+      <jdbc-url>jdbc:mysql://oimr.mysql.pythonanywhere-services.com:3306/oimr$OIMR</jdbc-url>
+    </data-source>
+  </component>
+</project>
