@@ -61,15 +61,16 @@ def list_invitations_for_course(course_id):
     alias = enroll.course_alias(course_id)
     
     invites = []
-    #try:
-    result = google_api.cls_svc.invitations().list(courseId=alias).execute()
-    invites.extend(result.get('invitations', []))
-    while result.get('nextPageToken'):
-        result = google_api.cls_svc.invitations().list(courseId=alias, pageToken=result['nextPageToken']).execute()
+    try:
+        result = google_api.cls_svc.invitations().list(courseId=alias).execute()
         invites.extend(result.get('invitations', []))
-    # except:
-    #     invites = []
+        while result.get('nextPageToken'):
+            result = google_api.cls_svc.invitations().list(courseId=alias, pageToken=result['nextPageToken']).execute()
+            invites.extend(result.get('invitations', []))
+    except:
+        invites = []
     logging.info('{} unaccepted invitations for {}'.format(len(invites), course_id))
+    return invites
 
 def invitation_accepted(invitation_id):
     try:
