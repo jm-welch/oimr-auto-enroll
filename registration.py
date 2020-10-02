@@ -19,6 +19,17 @@ class RegistrantList(UserList):
     def _raw(self):
         return [Registrant(d) for d in self._data]
 
+    def find_registrant(self, value, field='registrationId'):
+        try:
+            result = [r for r in self.data if getattr(r, field) == value]
+        except:
+            result = []
+            
+        if result:
+            return result[0]
+        else:
+            return False
+
     @property
     def registrant_count(self):
         """ Count unique registrants, using Registrant.oimr_id as a key """
@@ -180,7 +191,7 @@ class Registrant():
     def __init__(self, raw_data):
         self._raw = raw_data
         self.customer_id = self._raw.get('orderCustomerId', '')
-        self.registrationId = self._raw.get('orderId', '')
+        self.registrationId = self._raw.get('displayId', '')
         self.orderNumber = self._raw.get('orderNumber', '')
         self.dateCreated = datetime.datetime.strptime(self._raw.get('dateCreated'), DATE_FMT)
         self.total = float(self._raw.get('total', 0))

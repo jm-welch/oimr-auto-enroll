@@ -2,10 +2,22 @@
 *.pyc
 *.lock
 *.pickle
+__pycache__/*
+.ipynb_checkpoints/*
+*.ipynb
 
 #VSCode
 .vscode/*
+
 #idea
 .idea
+
+#archive
+archive
+
 #SEKRITS
 *secret.json
+
+#Script/logs
+*.log
+
