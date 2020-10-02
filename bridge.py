@@ -17,7 +17,7 @@ from slack import WebClient
 from slack.errors import SlackApiError
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     filename='bridge.log',
     format='%(asctime)s %(levelname)s (%(module)s:%(funcName)s:%(lineno)d) - %(msg)s'
 )
@@ -63,11 +63,11 @@ def get_regfox_data(regfox_api):
     logging.info('Registrant list fetched with {} entries.'.format(len(registrants)))
     return registrants
 
-def make_commons_enrollment_list(registrants):
+def make_commons_invite_list(registrants):
     """
     Look at registrations and identify students who do not have a commons enrollment in the db
     """
-    logging.debug('make_commons_enrollment_list() started')
+    logging.debug('make_commons_invite_list() started')
 
     result = []
 
@@ -83,11 +83,11 @@ def make_commons_enrollment_list(registrants):
     logging.debug(result)
     return result
 
-def enroll_student(registrant, courseId, google_api):
+def invite_student(registrant, courseId, google_api):
     """
-    Enroll $registrant in $course using the courses.student.invite method
+    Invite $registrant to $course using the courses.student.invite method
     """
-    logging.debug('enroll_student() started with params: registrant={}, course={}'.format(registrant, courseId))
+    logging.debug('invite_student() started with params: registrant={}, course={}'.format(registrant, courseId))
 
     # Add domain alias prefix
     alias = 'd:' + courseId
@@ -98,7 +98,7 @@ def enroll_student(registrant, courseId, google_api):
     except enrollment.HttpError as e:
         headers, details = e.args
         details = json.loads(details.decode())
-        msg = 'Encountered error enrolling {!r} to course {} - {}'.format(registrant, courseId, details['error']['status'])
+        msg = 'Encountered error inviting {!r} to course {} - {}'.format(registrant, courseId, details['error']['status'])
         # Silence errors on future runs by adding with null invitationId and an error code
         sql.add_invitation(registrant.registrationId, registrant.email_addr, courseId, status='ERR:{}'.format(details['error']['status']))
         logging.exception(msg)
@@ -107,7 +107,7 @@ def enroll_student(registrant, courseId, google_api):
     except:
         logging.exception('Encountered an unexpected error')
     else:
-        logging.info('{!r} enrolled in course {} with studentId {}'.format(registrant, courseId, result['id']))
+        logging.info('{!r} invited to course {} with studentId {}'.format(registrant, courseId, result['id']))
         sql.add_invitation(registrant.registrationId, registrant.email_addr, courseId, invitationId=result['id'])
         # DB insert to add student to students table with studentId from response
         return True
@@ -154,16 +154,16 @@ def main(regfox_api, google_api):
     registrants = get_regfox_data(regfox_api)
 
     # Deal with The Commons
-    enroll_in_commons = make_commons_enrollment_list(registrants)
-    summary.append('* {} student(s) to enroll in commons'.format(len(enroll_in_commons)))
+    enroll_in_commons = make_commons_invite_list(registrants)
+    summary.append('* {} student(s) to invite to Commons'.format(len(enroll_in_commons)))
     if enroll_in_commons:
         status = [0, 0]
         for student in enroll_in_commons:
-            if enroll_student(student, 'commons1', google_api): 
+            if invite_student(student, 'commons1', google_api): 
                 status[0] += 1
             else:
                 status[1] += 1
-        summary.append('* Enrolled {} in commons ({} error{})'.format(status[0], status[1], 's' if any((not(status[1]), status[1] > 1)) else ''))
+        summary.append('* Invited {} to commons ({} error{})'.format(status[0], status[1], 's' if any((not(status[1]), status[1] > 1)) else ''))
 
     # Make the list of tradhall/corecourse changes
     #change_list = dict(generate_change_list(registrants))

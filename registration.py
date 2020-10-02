@@ -19,8 +19,12 @@ class RegistrantList(UserList):
     def _raw(self):
         return [Registrant(d) for d in self._data]
 
-    def find_registrant(self, reg_id):
-        result = [r for r in self.data if r.registrationId == reg_id]
+    def find_registrant(self, value, field='registrationId'):
+        try:
+            result = [r for r in self.data if getattr(r, field) == value]
+        except:
+            result = []
+            
         if result:
             return result[0]
         else:
