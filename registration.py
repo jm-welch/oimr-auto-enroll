@@ -15,16 +15,16 @@ class RegistrantList(UserList):
         # Remove invalid entries
         self.data = [Registrant(d) for d in self.validate(data)]
 
+    @property
+    def _raw(self):
+        return [Registrant(d) for d in self._data]
+
     def find_registrant(self, reg_id):
         result = [r for r in self.data if r.registrationId == reg_id]
         if result:
             return result[0]
         else:
             return False
-
-    @property
-    def _raw(self):
-        return [Registrant(d) for d in self._data]
 
     @property
     def registrant_count(self):
