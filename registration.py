@@ -25,8 +25,10 @@ class RegistrantList(UserList):
         except:
             result = []
             
-        if result:
+        if len(result) == 1:
             return result[0]
+        elif len(result) >= 1:
+            return result
         else:
             return False
 
