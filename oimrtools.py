@@ -103,18 +103,13 @@ def update_invitations_for_course(courseId):
     
     c.close()
 
-    
-
-
-
-
 def invitation_accepted(invitation_id):
     try:
-        result = google_api.cls_svc.invitations().get(id=invitation_id)
+        result = google_api.cls_svc.invitations().get(id=invitation_id).execute()
     except:
         result = []
     
-    return bool(result)
+    return not bool(result)
 
 def find_student(registrant, course_id):
     try:
@@ -133,12 +128,7 @@ def find_student(registrant, course_id):
 
     # Check for student in Classroom
     if rows:
-        try:
-            google_api.cls_svc.invitations().get(id=dbresult['invitation_Id']).execute()
-        except:
-            logging.info('Student has accepted invitation.')
-        else:
-            logging.info('Student has not accepted invitation.')
+        logging.info('Student has {}accepted invitation.'.format('not ' if not invitation_accepted(dbresult['invitation_Id']) else ''))
     try:
         google_api.cls_svc.courses().students().get(courseId=enroll.course_alias(course_id), userId=registrant.email_addr).execute()
     except:
