@@ -17,7 +17,7 @@ from slack import WebClient
 from slack.errors import SlackApiError
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     filename='bridge.log',
     format='%(asctime)s %(levelname)s (%(module)s:%(funcName)s:%(lineno)d) - %(msg)s'
 )
