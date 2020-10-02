@@ -19,6 +19,13 @@ class RegistrantList(UserList):
     def _raw(self):
         return [Registrant(d) for d in self._data]
 
+    def find_registrant(self, reg_id):
+        result = [r for r in self.data if r.registrationId == reg_id]
+        if result:
+            return result[0]
+        else:
+            return False
+
     @property
     def registrant_count(self):
         """ Count unique registrants, using Registrant.oimr_id as a key """

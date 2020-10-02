@@ -9,6 +9,7 @@ Purpose:
 
 import registration
 import enrollment
+import OIMRMySQL
 import courses
 import logging
 import json
@@ -21,12 +22,20 @@ logging.basicConfig(
     format='%(asctime)s %(levelname)s (%(module)s:%(funcName)s:%(lineno)d) - %(msg)s'
 )
 
-with open('google_secret.json', 'r') as infile: client_config = json.load(infile)
-with open('regfox_secret.json', 'r') as infile: regfox_auth = json.load(infile)
-with open('slack_secret.json', 'r') as tokenfile: slackauth = json.load(tokenfile)
-logging.debug(slackauth)
+logging.info("########### Bridge script started ###########")
 
-slack_client = WebClient(**slackauth)
+with open('sql_secret.json', 'r') as infile: sql_creds = json.load(infile)
+logging.debug('Connecting to MySQL server...')
+try:
+    sql = OIMRMySQL.SQL(**sql_creds)
+except:
+    logging.exception('Failed to connect to DB')
+else:
+    logging.info("DB connection successful")
+
+sekrets = sql.get_sekrets()
+
+slack_client = WebClient(**sekrets['slack'])
 
 def post_to_slack(message, channel='G01BV8478D7'):
     """
@@ -62,43 +71,44 @@ def make_commons_enrollment_list(registrants):
 
     result = []
 
-    # already_enrolled = DB query to pull all students with enrollments in the commons
-    already_enrolled = []
+    # already_invited = DB query to pull all students with enrollments in the commons
+    already_invited = sql.get_commons_invitations()
+    logging.debug(already_invited)
 
     for r in registrants:
-        if r.email_addr == 'jeremy.m.welch@gmail.com':
-        #if r.email_addr not in already_enrolled:
+        if r.email_addr not in already_invited:
             result.append(r)
 
     logging.info('{} students to enroll in commons'.format(len(result)))
     logging.debug(result)
     return result
 
-def enroll_student(registrant, course, google_api):
+def enroll_student(registrant, courseId, google_api):
     """
     Enroll $registrant in $course using the courses.student.invite method
     """
-    logging.debug('enroll_student() started with params: registrant={}, course={}'.format(registrant, course))
+    logging.debug('enroll_student() started with params: registrant={}, course={}'.format(registrant, courseId))
 
     # Add domain alias prefix
-    alias = 'd:' + course
+    alias = 'd:' + courseId
 
     try:
-        if registrant.email_addr != 'jeremy.m.welch@gmail.com': raise(Exception)
         result = google_api.add_student(courseId=alias, studentEmail=registrant.email_addr)
         logging.debug(result)
-        #result = 'enrollment.add_student(courseId={}, studentEmail={})'.format(alias, registrant.email_addr)
     except enrollment.HttpError as e:
         headers, details = e.args
         details = json.loads(details.decode())
-        msg = 'Encountered error enrolling {!r} to course {} - {}'.format(registrant, course, details['error']['status'])
+        msg = 'Encountered error enrolling {!r} to course {} - {}'.format(registrant, courseId, details['error']['status'])
+        # Silence errors on future runs by adding with null invitationId and an error code
+        sql.add_invitation(registrant.registrationId, registrant.email_addr, courseId, status='ERR:{}'.format(details['error']['status']))
         logging.exception(msg)
         post_to_slack(':warning: ' + msg)
         return False
     except:
         logging.exception('Encountered an unexpected error')
     else:
-        logging.info('{!r} enrolled in course {} with studentId {}'.format(registrant, course, result['id']))
+        logging.info('{!r} enrolled in course {} with studentId {}'.format(registrant, courseId, result['id']))
+        sql.add_invitation(registrant.registrationId, registrant.email_addr, courseId, invitationId=result['id'])
         # DB insert to add student to students table with studentId from response
         return True
 
@@ -166,6 +176,6 @@ def main(regfox_api, google_api):
 
 if __name__ == '__main__':
     post_to_slack(':sparkles: Bridge script started :sparkles:')
-    regfox_api = registration.RegFoxAPI(**regfox_auth)
-    google_api = enrollment.GoogleAPI(client_config)
+    regfox_api = registration.RegFoxAPI(**sekrets['regfox'])
+    google_api = enrollment.GoogleAPI(sekrets['google'])
     main(regfox_api, google_api)
