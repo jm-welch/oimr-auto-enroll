@@ -1,9 +1,13 @@
+#!/usr/bin/python3.7
 from __future__ import print_function
 import pickle
 import os.path
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+import pythonAnywhereConnect as pa
+
+oimrDb = pa.get_pyAnywhereAPI()
 
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = [
@@ -13,7 +17,7 @@ SCOPES = [
     'https://www.googleapis.com/auth/classroom.courses',
     'https://www.googleapis.com/auth/classroom.profile.emails',
     'https://www.googleapis.com/auth/classroom.profile.photos'
-    ]
+]
 
 cred_file = 'google_secret.json'
 
@@ -61,6 +65,7 @@ class API():
 
     def list_courses(self):
         # List all Classrooms in the domain
+
         courses = self.cls_svc.courses().list().execute()
         return courses['courses']
 
@@ -68,7 +73,7 @@ class API():
         # Fetch a user's data using their ID
         user = self.cls_svc.userProfiles().get(userId=u_id).execute()
         return user
-    
+
     def add_student(self, courseId, studentEmail, role='STUDENT'):
         # Invite a student to join a Classroom
         body = {
@@ -78,3 +83,15 @@ class API():
         }
         enrollment = self.cls_svc.invitations().create(body=body).execute()
         return enrollment
+
+
+def get_GoogleApi():
+    api = API()
+    return api
+
+
+if __name__ == '__main__':
+    api = get_GoogleApi()
+
+    oimrGoogleCourses = api.list_courses()
+    print('done')
