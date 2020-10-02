@@ -15,6 +15,13 @@ class RegistrantList(UserList):
         # Remove invalid entries
         self.data = [Registrant(d) for d in self.validate(data)]
 
+    def find_registrant(self, reg_id):
+        result = [r for r in self.data if r.registrationId == reg_id]
+        if result:
+            return result[0]
+        else:
+            return False
+
     @property
     def _raw(self):
         return [Registrant(d) for d in self._data]
@@ -180,7 +187,7 @@ class Registrant():
     def __init__(self, raw_data):
         self._raw = raw_data
         self.customer_id = self._raw.get('orderCustomerId', '')
-        self.registrationId = self._raw.get('orderId', '')
+        self.registrationId = self._raw.get('displayId', '')
         self.orderNumber = self._raw.get('orderNumber', '')
         self.dateCreated = datetime.datetime.strptime(self._raw.get('dateCreated'), DATE_FMT)
         self.total = float(self._raw.get('total', 0))
