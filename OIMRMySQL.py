@@ -1,5 +1,6 @@
 import MySQLdb as sql
 from MySQLdb._exceptions import OperationalError
+from MySQLdb.cursors import DictCursor, Cursor
 import hashlib
 import json
 
@@ -38,18 +39,18 @@ class SQL():
             except:
                 return False
 
-    @property
-    def cursor(self):
+    def cursor(self, d=False):
         """ Make sure the connection is still alive and get a cursor """
+        cursorclass = DictCursor if d else Cursor
         if self.ping():
-            cur = self.conn.cursor()
+            cur = self.conn.cursor(cursorclass)
         else:
             raise Exception
 
         return cur
 
     def get_sekrets(self):
-        cur = self.cursor
+        cur = self.cursor()
         q = 'SELECT * FROM sekrets'
         try:
             cur.execute(q)
@@ -63,7 +64,7 @@ class SQL():
         return result
 
     def update_course_invites(self, pending_invites):
-        cur = self.cursor
+        cur = self.cursor()
         q1 = """SELECT invitation_Id FROM oimr_invitations WHERE invitation_Status = 'SENT'"""
         q2 = """UPDATE oimr_invitations SET invitatation_status = 'ACCEPTED' WHERE invitation_Id = %s"""
 
@@ -81,7 +82,7 @@ class SQL():
                 
     
     def get_student_in_course(self, studentId, courseId):
-        cur = self.cursor
+        cur = self.cursor()
         q = "SELECT * FROM oimr_invitations WHERE registrant_Id = %s AND course_Id = %s"
         val = (studentId, courseId)
 
@@ -99,7 +100,7 @@ class SQL():
         return self.get_invitations_for_course('commons1')
 
     def get_invitations_for_course(self, courseId):
-        cur = self.cursor
+        cur = self.cursor()
         q = "SELECT registrant_email FROM oimr_invitations WHERE course_Id = %s"
         val = (courseId,)
 
@@ -120,7 +121,7 @@ class SQL():
                VALUES (%s, %s, %s, %s, %s, %s)"""
         val = (hash_student(registrantId, courseId), registrantId, registrantEmail, courseId, invitationId, status)
 
-        cur = self.cursor
+        cur = self.cursor()
 
         cur.execute(q, val)
         self.conn.commit()
