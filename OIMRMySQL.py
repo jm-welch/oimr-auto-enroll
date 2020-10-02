@@ -27,6 +27,9 @@ class SQL():
     def connect(self, creds):
         self.conn = sql.connect(**creds)
 
+    def commit(self):
+        self.conn.commit()
+
     def ping(self):
         try:
             self.conn.ping()

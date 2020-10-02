@@ -7,6 +7,7 @@ import enrollment as enroll
 import OIMRMySQL as SQL
 import logging
 import json
+from collections import Counter
 from slack import WebClient
 from slack.errors import SlackApiError
 
@@ -71,6 +72,41 @@ def list_invitations_for_course(course_id):
         invites = []
     logging.info('{} unaccepted invitations for {}'.format(len(invites), course_id))
     return invites
+
+def update_invitations_for_course(courseId):
+    invites = list_invitations_for_course(courseId)
+    invites = tuple(i.get('id') for i in invites)
+
+    q = """UPDATE oimr_invitations 
+           SET invitation_status='ACCEPTED' 
+           WHERE 
+               invitation_status='SENT' AND 
+               invitation_id NOT IN {}""".format(invites)
+
+    c = sql.cursor()
+    try:
+        r = c.execute(q)
+    except:
+        logging.exception('Failed to update DB')
+    else:
+        sql.commit()
+        logging.info('Updated {} rows'.format(r))
+
+    q2 = """SELECT invitation_status FROM oimr_invitations"""
+    try:
+        r = c.execute(q2)
+    except:
+        logging.exception("DB Query failed")
+    else:
+        results = c.fetchall()
+        logging.info('Breakdown for {} - {}'.format(courseId, Counter((i[0] for i in results))))
+    
+    c.close()
+
+    
+
+
+
 
 def invitation_accepted(invitation_id):
     try:
