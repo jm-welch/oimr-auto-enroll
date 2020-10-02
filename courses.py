@@ -10,6 +10,9 @@ def course_title_with_code(code):
 def list_all_courses():
     return list(COURSES.keys())
 
+def list_all_liveQA():
+    return ['{}L1'.format(c) for c in COURSES.keys()]
+
 # Import courses from json
 with open('courses.json', 'r') as infile:
     COURSES = json.load(infile)
