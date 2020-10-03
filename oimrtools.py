@@ -135,3 +135,87 @@ def find_student(registrant, course_id):
         logging.info('Student email not found in course enrollments.')
     else:
         logging.info('Student email found in course enrollments.')
+
+def remove_student(registrant, courseId):
+    q1 = """SELECT invitation_Id FROM oimr_invitations WHERE hash = %s"""
+    inv_hash = SQL.hash_student(registrant.registrationId, courseId)
+    val = (inv_hash, )
+    logging.info('Invite hash: '+inv_hash)
+    
+    c = sql.cursor(d=True)
+    rows = c.execute(q1, val)
+    if rows:
+        logging.info('{} found in invitations table for course {}'.format(registrant, courseId))
+        result = c.fetchone()
+        invitationId = result['invitation_Id']
+    
+        q2 = """DELETE FROM oimr_invitations WHERE hash = %s"""
+        if c.execute(q2, val):
+            logging.info('{} removed from invitations table for course {}'.format(registrant, courseId))
+            sql.commit()
+    else:
+        logging.info('{} invite to {} not found in invitations table'.format(registrant, courseId))
+        invitationId = None
+        
+    c.close()
+    
+    alias = 'd:'+courseId
+    if (invitationId and invitation_accepted(invitationId)) or not invitationId:
+        try:
+            google_api.cls_svc.courses().students().delete(courseId=alias, userId=registrant.email_addr).execute()
+        except:
+            logging.warn('{} not found in {} classroom'.format(registrant, courseId))
+        else:
+            logging.info('{} removed from {} classroom'.format(registrant, courseId))
+    else:
+        try:
+            google_api.cls_svc.invitations().delete(id=invitationId).execute()
+        except:
+            logging.warn('Invitation not found')
+        else:
+            logging.info('Invitation deleted - you may re-invite.')
+        
+
+def invite_student(registrant, courseId, force=False):
+    #TODO: Make 'force' force the add, even if it's not in their registration
+    alias = 'd:'+courseId
+
+    invHash = SQL.hash_student(registrant.registrationId, courseId)
+
+    if courseId == 'commons1':
+        logging.info('Invite {} to the Commons'.format(registrant))
+    elif courseId == 'tradhall1':
+        if not registrant.extras:
+            logging.warning("{} did not register for extras. Nuh-uh, I won't do it.".format(registrant))
+            return
+        else:
+            logging.info('Invite {} to Trad Hall'.format(registrant))
+    else:
+        if courseId not in registrant.core_courses:
+            logging.warning("{} did not register for {}. Nuh-uh, I won't do it.".format(registrant, courseId))
+            return
+        else:
+            logging.info('Invite {} to {}'.format(registrant, courseId))
+
+    try:
+        result = google_api.cls_svc.invitations().create(courseId=alias, userId=registrant.email_addr).execute()
+    except:
+        logging.exception('Unable to add student to classroom')
+    else:
+        logging.info('Student invited to classroom with id {}'.format(result.get('id')))
+        q = """INSERT INTO oimr_invitations (hash, registrant_id, registrant_email, invitation_id, invitation_status, course_id)
+               VALUES (%s, %s, %s, %s, %s, %s)"""
+        v = (
+            invHash, 
+            registrant.registrationId,
+            registrant.email_addr,
+            result.get('id'),
+            'SENT',
+            courseId
+            )
+        c = sql.cursor()
+        if c.execute(q, v):
+            logging.info('Invite added to DB with hash {}'.format('invHash'))
+        else:
+            logging.error('Invite could not be added to DB')
+        c.close()
