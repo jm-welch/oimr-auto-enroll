@@ -220,3 +220,33 @@ def invite_student(registrant, courseId, force=False):
         else:
             logging.error('Invite could not be added to DB')
         c.close()
+
+def get_invite_errors():
+    q = """SELECT * FROM oimr_invitations WHERE invitation_status LIKE 'ERR%'"""
+    c = sql.cursor(d=True)
+    if c.execute(q):
+        result = c.fetchall()
+    else:
+        result = []
+    
+    c.close()
+    output = {}
+
+    for r in result:
+        registrant = registrants.find_registrant(r.get('registrant_Id'))
+        logging.info('Course: {} - {!r} - Error: {}'.format(r.get('course_Id'), registrant, r.get('invitation_status')))
+        r['registrant'] = registrant
+        output[r.get('hash')] = r
+    
+    return output
+
+def fix_invite(old_hash, new_hash):
+    c = sql.cursor()
+    q1 = """DELETE FROM oimr_invitations WHERE hash = %s"""
+    v1 = (new_hash,)
+    q2 = """UPDATE oimr_invitations SET hash=%s WHERE hash=%s"""
+    v2 = (new_hash, old_hash)
+    c.execute(q1, v1)
+    c.execute(q2, v2)
+    sql.commit()
+    c.close()
