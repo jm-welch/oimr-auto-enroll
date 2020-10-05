@@ -177,7 +177,6 @@ def remove_student(registrant, courseId):
         
 
 def invite_student(registrant, courseId, force=False):
-    #TODO: Make 'force' force the add, even if it's not in their registration
     alias = 'd:'+courseId
 
     invHash = SQL.hash_student(registrant.registrationId, courseId)
@@ -187,13 +186,19 @@ def invite_student(registrant, courseId, force=False):
     elif courseId == 'tradhall1':
         if not registrant.extras:
             logging.warning("{} did not register for extras. Nuh-uh, I won't do it.".format(registrant))
-            return
+            if not force: 
+                return
+            else:
+                logging.info('Use of force authorized. Adding anyway.')
         else:
             logging.info('Invite {} to Trad Hall'.format(registrant))
     else:
         if courseId not in registrant.core_courses:
             logging.warning("{} did not register for {}. Nuh-uh, I won't do it.".format(registrant, courseId))
-            return
+            if not force: 
+                return
+            else:
+                logging.info('Use of force authorized. Adding anyway.')
         else:
             logging.info('Invite {} to {}'.format(registrant, courseId))
 
@@ -203,23 +208,7 @@ def invite_student(registrant, courseId, force=False):
         logging.exception('Unable to add student to classroom')
     else:
         logging.info('Student invited to classroom with id {}'.format(result.get('id')))
-        q = """INSERT INTO oimr_invitations (hash, registrant_id, registrant_email, invitation_id, invitation_status, course_id)
-               VALUES (%s, %s, %s, %s, %s, %s)"""
-        v = (
-            invHash, 
-            registrant.registrationId,
-            registrant.email_addr,
-            result.get('id'),
-            'SENT',
-            courseId
-            )
-        c = sql.cursor()
-        if c.execute(q, v):
-            logging.info('Invite added to DB with hash {}'.format(invHash))
-            sql.commit()
-        else:
-            logging.error('Invite could not be added to DB')
-        c.close()
+        sql.add_invitation(registrant.registrationId, registrant.email_addr, courseId, invitationId=result.get('id')))
 
 def get_invite_errors():
     q = """SELECT * FROM oimr_invitations WHERE invitation_status LIKE 'ERR%'"""
