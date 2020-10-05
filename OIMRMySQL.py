@@ -81,8 +81,6 @@ class SQL():
             accepted = [(i,) for i in result if i not in pending_invites]
             cur.executemany(q2, accepted)
             self.conn.commit()
-            
-                
     
     def get_student_in_course(self, studentId, courseId):
         cur = self.cursor()
