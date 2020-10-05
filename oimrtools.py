@@ -198,7 +198,7 @@ def invite_student(registrant, courseId, force=False):
             logging.info('Invite {} to {}'.format(registrant, courseId))
 
     try:
-        result = google_api.cls_svc.invitations().create(courseId=alias, userId=registrant.email_addr).execute()
+        result = google_api.add_student(courseId=alias, studentEmail=registrant.email_addr)
     except:
         logging.exception('Unable to add student to classroom')
     else:
@@ -215,7 +215,8 @@ def invite_student(registrant, courseId, force=False):
             )
         c = sql.cursor()
         if c.execute(q, v):
-            logging.info('Invite added to DB with hash {}'.format('invHash'))
+            logging.info('Invite added to DB with hash {}'.format(invHash))
+            sql.commit()
         else:
             logging.error('Invite could not be added to DB')
         c.close()
