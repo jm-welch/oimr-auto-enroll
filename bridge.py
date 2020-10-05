@@ -3,7 +3,7 @@
 """
 OIMR Auto-Enrollment Bridge
 
-Purpose: 
+Purpose:
     Read registration data from RegFox, determine enrollments/withdrawals, and
     execute Google API commands to make all necessary updates.
 """
@@ -43,12 +43,12 @@ def post_to_slack(message, channel='G01BV8478D7'):
     Post $message to Slack in $channel (default=#enrollment-feed)
     """
     logging.debug('post_to_slack() started with arguments:\n message: {}\n channel: {}'.format(message, channel))
-    
+
     body = {
         'channel': channel,
         'text': message
     }
-    
+
     try:
         response = slack_client.chat_postMessage(**body)
     except SlackApiError as e:
@@ -77,7 +77,8 @@ def make_commons_invite_list(registrants):
     logging.debug(already_invited)
 
     for r in registrants:
-        if r.email_addr not in already_invited:
+        invHash = OIMRMySQL.hash_student(r.registrationId, 'commons1')
+        if invHash not in already_invited:
             result.append(r)
 
     logging.info('{} students to enroll in commons'.format(len(result)))
@@ -133,7 +134,7 @@ def generate_change_list(registrants):
                     courses_to_add.append(course)
         if r.extras and (r.oimr_id, 'tradhall1') not in enrollments:
             courses_to_add.append('tradhall1')
-        
+
         # Find courses needing withdrawal
         courses_to_remove = []
         # Iterate enrollments for student
@@ -150,7 +151,7 @@ def main(regfox_api, google_api):
     logging.debug(google_api)
 
     summary = ['Execution summary:\n']
-    
+
     # Get registered students from RegFox
     registrants = get_regfox_data(regfox_api)
 
@@ -160,7 +161,7 @@ def main(regfox_api, google_api):
     if enroll_in_commons:
         status = [0, 0]
         for student in enroll_in_commons:
-            if invite_student(student, 'commons1', google_api): 
+            if invite_student(student, 'commons1', google_api):
                 status[0] += 1
             else:
                 status[1] += 1
@@ -170,7 +171,7 @@ def main(regfox_api, google_api):
     #change_list = dict(generate_change_list(registrants))
     #logging.debug(change_list)
     #summary.append('* {} students with enrollment changes'.format(len(change_list)))
-    
+
     post_to_slack('\n'.join(summary))
     return
 

@@ -63,7 +63,7 @@ class SQL():
             result = None
         finally:
             cur.close()
-        
+
         return result
 
     def update_course_invites(self, pending_invites):
@@ -76,12 +76,12 @@ class SQL():
             result = [r[0] for r in cur.fetchall()]
         except:
             result = None
-        
+
         if result:
             accepted = [(i,) for i in result if i not in pending_invites]
             cur.executemany(q2, accepted)
             self.conn.commit()
-    
+
     def get_student_in_course(self, studentId, courseId):
         cur = self.cursor()
         q = "SELECT * FROM oimr_invitations WHERE registrant_Id = %s AND course_Id = %s"
@@ -94,21 +94,21 @@ class SQL():
             result = None
         finally:
             cur.close()
-        
+
         return result
 
     def get_commons_invitations(self):
         return self.get_invitations_for_course('commons1')
 
     def get_invitations_for_course(self, courseId):
-        cur = self.cursor()
-        q = "SELECT registrant_email FROM oimr_invitations WHERE course_Id = %s"
+        cur = self.cursor(d=True)
+        q = "SELECT * FROM oimr_invitations WHERE course_Id = %s"
         val = (courseId,)
 
         try:
             cur.execute(q, val)
             result = cur.fetchall()
-            result = [r[0] for r in result]
+            result = {r['hash']: r for r in result}
         except:
             result = None
         finally:
@@ -117,7 +117,7 @@ class SQL():
         return result
 
     def add_invitation(self, registrantId, registrantEmail, courseId, invitationId=None, status='SENT'):
-        q = """INSERT INTO oimr_invitations 
+        q = """INSERT INTO oimr_invitations
                   (hash, registrant_Id, registrant_email, course_Id, invitation_Id, invitation_status)
                VALUES (%s, %s, %s, %s, %s, %s)"""
         val = (hash_student(registrantId, courseId), registrantId, registrantEmail, courseId, invitationId, status)
