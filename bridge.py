@@ -1,11 +1,11 @@
-#!python3.7
+#!/usr/bin/env python3.7
+
 """
 OIMR Auto-Enrollment Bridge
 
 Purpose: 
     Read registration data from RegFox, determine enrollments/withdrawals, and
     execute Google API commands to make all necessary updates.
-
 """
 
 import registration
