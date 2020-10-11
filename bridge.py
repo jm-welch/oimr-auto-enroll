@@ -1,15 +1,19 @@
+#!/usr/bin/env python3.7
 """
 OIMR Auto-Enrollment Bridge
 
-Purpose: 
+Purpose:
     Read registration data from RegFox, determine enrollments/withdrawals, and
     execute Google API commands to make all necessary updates.
 
 """
 
+import sys
+import traceback
+import pyAnyConnect as OIMRMySQL
 import registration
 import enrollment
-import OIMRMySQL
+import traceback
 import courses
 import logging
 import json
@@ -17,37 +21,53 @@ from slack import WebClient
 from slack.errors import SlackApiError
 
 logging.basicConfig(
-    level=logging.INFO,
-    filename='bridge.log',
+    level=logging.DEBUG,
+    filename='bridge_tts.log',
     format='%(asctime)s %(levelname)s (%(module)s:%(funcName)s:%(lineno)d) - %(msg)s'
 )
 
-logging.info("########### Bridge script started ###########")
+logging.info("########### tunnel script started ###########")
 
-with open('sql_secret.json', 'r') as infile: sql_creds = json.load(infile)
-logging.debug('Connecting to MySQL server...')
-try:
-    sql = OIMRMySQL.SQL(**sql_creds)
-except:
-    logging.exception('Failed to connect to DB')
-else:
-    logging.info("DB connection successful")
+# OIMRMySQL checks for the existence tunnel_secrets.json so no need to put it here.
+# sql is the returned API not the connection or cursor so we retrieve the connection as pconn and subsequent mysqly calls will open cursors in the sql interface as well as close on completion.
+# connection and tunnel will remain open until end of the run of this file.
+with OIMRMySQL.get_pyAnywhereAPI() as sql:
+    logging.debug('Get PyAnywhere Class (tunnel)...')
+    if not sql.gPaTunnel == None:
+        # use the tunnel connection which will have the additional port
+        try:
+            pConn = sql.make_mysql_connection(True)
+        except:
+            msg = traceback.print_exception()
+            print(msg)
+        # Do tunnel things
+    else:
+        try:
+            # otherwise use a local connection up in pythonAnywhere using limited local creds
+            pConn = sql.make_mysql_connection(False)
+
+        except:
+            msg = sys.exc_info()[2]
+            # traceback.print_exception(sys.etype,sys.value, sys.tb)
+            print(msg)
+            # TODO: MAY WANT TO HANDLE HOW
 
 sekrets = sql.get_sekrets()
 
 slack_client = WebClient(**sekrets['slack'])
+
 
 def post_to_slack(message, channel='G01BV8478D7'):
     """
     Post $message to Slack in $channel (default=#enrollment-feed)
     """
     logging.debug('post_to_slack() started with arguments:\n message: {}\n channel: {}'.format(message, channel))
-    
+
     body = {
         'channel': channel,
         'text': message
     }
-    
+
     try:
         response = slack_client.chat_postMessage(**body)
     except SlackApiError as e:
@@ -61,6 +81,8 @@ def get_regfox_data(regfox_api):
     registrants = regfox_api.get_registrants()
     registrants = registration.RegistrantList(registrants)
     logging.info('Registrant list fetched with {} entries.'.format(len(registrants)))
+    # Post unique reg count to Slack so we can keep an eye on it
+    post_to_slack('{} registrants fetched from RegFox'.format(registrants.registrant_count))
     return registrants
 
 def make_commons_invite_list(registrants):
@@ -76,12 +98,14 @@ def make_commons_invite_list(registrants):
     logging.debug(already_invited)
 
     for r in registrants:
-        if r.email_addr not in already_invited:
+        invHash = OIMRMySQL.hash_student(r.registrationId, 'commons1')
+        if invHash not in already_invited:
             result.append(r)
 
     logging.info('{} students to enroll in commons'.format(len(result)))
     logging.debug(result)
     return result
+
 
 def invite_student(registrant, courseId, google_api):
     """
@@ -132,7 +156,7 @@ def generate_change_list(registrants):
                     courses_to_add.append(course)
         if r.extras and (r.oimr_id, 'tradhall1') not in enrollments:
             courses_to_add.append('tradhall1')
-        
+
         # Find courses needing withdrawal
         courses_to_remove = []
         # Iterate enrollments for student
@@ -143,15 +167,42 @@ def generate_change_list(registrants):
             yield r, {'add': courses_to_add, 'remove': courses_to_remove}
 
 
+def mysql_update_registrants(registrants):
+    """
+     Create a hash of the registrant's full name,
+     date of birth, and email to serve as a unique ID  and class registration
+     """
+    studentsRegistered = []
+    for student in registrants:
+        student_Registered = {}
+        reg_date_created = student.dateCreated
+        for fd in student._raw['fieldData'] or []:
+            if fd.get('label') == 'First Name':
+                student_Registered['First_Name'] = fd.get('value')
+            if fd.get('label') == 'Last Name':
+                student_Registered['Last_Name'] = fd.get('value')
+
+        student_Registered['registrant_id'] = student._raw["displayId"]
+        student_Registered['Email'] = student.email_addr
+        student.dateCreated = student.dateCreated.strftime('%Y-%m-%d %H:%M:%S')
+        student_Registered['registrant_json'] = json.dumps(student._raw)
+
+        studentsRegistered.append(student_Registered)
+
+    return studentsRegistered
+
 def main(regfox_api, google_api):
     logging.debug('main block started')
     logging.debug(regfox_api)
     logging.debug(google_api)
-
     summary = ['Execution summary:\n']
-    
+
     # Get registered students from RegFox
     registrants = get_regfox_data(regfox_api)
+    # update registrants in Mysql Database
+    regDict = mysql_update_registrants(registrants)
+    regUpdate = sql.table_insert_update('oimr_registrations', regDict)
+    logging.info(regUpdate)
 
     # Deal with The Commons
     enroll_in_commons = make_commons_invite_list(registrants)
@@ -159,7 +210,7 @@ def main(regfox_api, google_api):
     if enroll_in_commons:
         status = [0, 0]
         for student in enroll_in_commons:
-            if invite_student(student, 'commons1', google_api): 
+            if invite_student(student, 'commons1', google_api):
                 status[0] += 1
             else:
                 status[1] += 1
@@ -169,9 +220,10 @@ def main(regfox_api, google_api):
     #change_list = dict(generate_change_list(registrants))
     #logging.debug(change_list)
     #summary.append('* {} students with enrollment changes'.format(len(change_list)))
-    
+
     post_to_slack('\n'.join(summary))
     return
+    # lets clean up any stragglers
 
 
 if __name__ == '__main__':
@@ -179,3 +231,4 @@ if __name__ == '__main__':
     regfox_api = registration.RegFoxAPI(**sekrets['regfox'])
     google_api = enrollment.GoogleAPI(sekrets['google'])
     main(regfox_api, google_api)
+    sql.exit_connections
