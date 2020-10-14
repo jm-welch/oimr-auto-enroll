@@ -22,7 +22,7 @@ from slack.errors import SlackApiError
 
 logging.basicConfig(
     level=logging.DEBUG,
-    filename='bridge_tts.log',
+    filename='bridge.log',
     format='%(asctime)s %(levelname)s (%(module)s:%(funcName)s:%(lineno)d) - %(msg)s'
 )
 
@@ -133,7 +133,7 @@ def invite_student(registrant, courseId, google_api):
     else:
         logging.info('{!r} invited to course {} with studentId {}'.format(registrant, courseId, result['id']))
         sql.add_invitation(registrant.registrationId, registrant.email_addr, courseId, invitationId=result['id'])
-        # DB insert to add student to students table with studentId from response
+        post_to_slack(f':heav-check-mark: {registrant} successfully invited to {courseId}')
         return True
 
 def generate_change_list(registrants):
@@ -174,19 +174,14 @@ def mysql_update_registrants(registrants):
      """
     studentsRegistered = []
     for student in registrants:
-        student_Registered = {}
-        reg_date_created = student.dateCreated
-        for fd in student._raw['fieldData'] or []:
-            if fd.get('label') == 'First Name':
-                student_Registered['First_Name'] = fd.get('value')
-            if fd.get('label') == 'Last Name':
-                student_Registered['Last_Name'] = fd.get('value')
-
-        student_Registered['registrant_id'] = student._raw["displayId"]
-        student_Registered['Email'] = student.email_addr
-        student.dateCreated = student.dateCreated.strftime('%Y-%m-%d %H:%M:%S')
-        student_Registered['registrant_json'] = json.dumps(student._raw)
-
+        student_Registered = {
+            'First_Name': student.get_path('name.first').get('value'),
+            'Last_Name': student.get_path('name.last').get('value'),
+            'registrant_id': student.registrationId,
+            'Email': student.email_addr,
+            'registrant_json': json.dumps(student._raw)
+        }
+        
         studentsRegistered.append(student_Registered)
 
     return studentsRegistered
@@ -195,7 +190,7 @@ def main(regfox_api, google_api):
     logging.debug('main block started')
     logging.debug(regfox_api)
     logging.debug(google_api)
-    summary = ['Execution summary:\n']
+    summary = [':scroll: Execution summary: :scroll:\n']
 
     # Get registered students from RegFox
     registrants = get_regfox_data(regfox_api)
@@ -220,8 +215,8 @@ def main(regfox_api, google_api):
     #change_list = dict(generate_change_list(registrants))
     #logging.debug(change_list)
     #summary.append('* {} students with enrollment changes'.format(len(change_list)))
-
-    post_to_slack('\n'.join(summary))
+    summary.append(' END SUMMARY')
+    post_to_slack('\n:scroll:'.join(summary))
     return
     # lets clean up any stragglers
 
