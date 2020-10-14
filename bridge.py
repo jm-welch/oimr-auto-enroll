@@ -82,7 +82,7 @@ def get_regfox_data(regfox_api):
     registrants = registration.RegistrantList(registrants)
     logging.info('Registrant list fetched with {} entries.'.format(len(registrants)))
     # Post unique reg count to Slack so we can keep an eye on it
-    post_to_slack('{} registrants fetched from RegFox'.format(registrants.registrant_count))
+    post_to_slack(':hash: {} registrants fetched from RegFox'.format(registrants.registrant_count))
     return registrants
 
 def make_commons_invite_list(registrants):
@@ -133,8 +133,20 @@ def invite_student(registrant, courseId, google_api):
     else:
         logging.info('{!r} invited to course {} with studentId {}'.format(registrant, courseId, result['id']))
         sql.add_invitation(registrant.registrationId, registrant.email_addr, courseId, invitationId=result['id'])
-        post_to_slack(f':heav-check-mark: {registrant} successfully invited to {courseId}')
+        post_to_slack(f':eight_spoked_asterisk: {registrant!r} successfully invited to {courses.course_title_with_code(courseId)}')
         return True
+
+def remove_student(registrant, courseId, googleApi):
+    """
+    Do nothing for now, just post to Slack
+    """
+    post_to_slack(f':eight_pointed_black_star: Remove {registrant!r} from {courses.course_title_with_code(courseId)}.')
+
+def process_changes(googleApi, registrant, add, remove):
+    for courseId in add or []:
+        invite_student(registrant, courseId, googleApi)
+    for courseId in remove or []:
+        remove_student(registrant, courseId, googleApi)
 
 def generate_change_list(registrants):
     """
@@ -142,23 +154,26 @@ def generate_change_list(registrants):
     Iterate over registrants, comparing against enrollments from DB
     When changes need to occur, yield result
     """
-    logging.debug('change_list() started')
-
+    logging.debug('generate_change_list() started')
+    registrants = [r for r in registrants if r.email_addr in 'lisha.haughton@gmail.com jeremy.m.welch@gmail.com'.split()]
     # DB call to pull all enrollments except commons from DB
-    enrollments = []
+    enrollments = sql.get_course_invitations()
 
     for r in registrants:
         # Find courses needing enrollment
         courses_to_add = []
         if r.core_courses:
             for course in r.core_courses:
-                if (r.oimr_id, course) not in enrollments:
+                if OIMRMySQL.hash_student(r.registrationId, course) not in enrollments:
                     courses_to_add.append(course)
-        if r.extras and (r.oimr_id, 'tradhall1') not in enrollments:
-            courses_to_add.append('tradhall1')
+        #if r.extras and OIMRMySQL.hash_student(r.registrationId, 'tradhall1') not in enrollments:
+            #courses_to_add.append('tradhall1')
 
         # Find courses needing withdrawal
-        courses_to_remove = []
+        this_enrollment = [v for k,v in enrollments.items() if v.get('registrant_Id') == r.registrationId]
+        logging.debug(this_enrollment)
+        courses_to_remove = [e.get('course_Id') for e in this_enrollment if e.get('course_Id') not in r.core_courses]
+        
         # Iterate enrollments for student
         # Append courses no longer in registration
 
@@ -201,7 +216,7 @@ def main(regfox_api, google_api):
 
     # Deal with The Commons
     enroll_in_commons = make_commons_invite_list(registrants)
-    summary.append('* {} student(s) to invite to Commons'.format(len(enroll_in_commons)))
+    summary.append(':small_blue_diamond: {} student(s) to invite to Commons'.format(len(enroll_in_commons)))
     if enroll_in_commons:
         status = [0, 0]
         for student in enroll_in_commons:
@@ -209,14 +224,14 @@ def main(regfox_api, google_api):
                 status[0] += 1
             else:
                 status[1] += 1
-        summary.append('* Invited {} to commons ({} error{})'.format(status[0], status[1], 's' if any((not(status[1]), status[1] > 1)) else ''))
+        summary.append(':small_blue_diamond: Invited {} to commons ({} error{})'.format(status[0], status[1], 's' if any((not(status[1]), status[1] > 1)) else ''))
 
-    # Make the list of tradhall/corecourse changes
-    #change_list = dict(generate_change_list(registrants))
-    #logging.debug(change_list)
+    # Process the list of tradhall/corecourse changes
+    #[process_changes(google_api, reg, **changes) for reg, changes in generate_change_list(registrants) or []]
+        
     #summary.append('* {} students with enrollment changes'.format(len(change_list)))
-    summary.append(' END SUMMARY')
-    post_to_slack('\n:scroll:'.join(summary))
+    
+    post_to_slack('\n'.join(summary))
     return
     # lets clean up any stragglers
 
