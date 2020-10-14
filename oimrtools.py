@@ -5,6 +5,7 @@ One import to provide all functionality scripted for the retreat, for easy CLI u
 import registration as reg
 import enrollment as enroll
 import OIMRMySQL as SQL
+import pyAnyConnect as paSQL
 import logging
 import json
 from collections import Counter
@@ -18,16 +19,10 @@ logging.basicConfig(
 
 logging.debug('Connecting to MySQL server...')
 
-try:
-    with open('sql_secret.json', 'r') as infile:
-        sql = SQL.SQL(**json.load(infile))
-except:
-    logging.exception('Failed to connect to DB')
-    quit()
-else:
-    logging.info("DB connection successful")
-    sekrets = sql.get_sekrets()
+with paSQL.get_pyAnywhereAPI() as sql:
+    pConn = sql.make_mysql_connection(False)
 
+sekrets = sql.get_sekrets()
 logging.debug('Connecting to Slack...')
 slack_client = WebClient(**sekrets['slack'])
 
@@ -73,35 +68,23 @@ def list_invitations_for_course(course_id):
     logging.info('{} unaccepted invitations for {}'.format(len(invites), course_id))
     return invites
 
-def update_invitations_for_course(courseId):
-    invites = list_invitations_for_course(courseId)
-    invites = tuple(i.get('id') for i in invites)
+def update_invitation_status():
+    db_invites = sql.get_sent_invitations()
+    logging.debug(db_invites)
+    db_courses = set(x.get('course_Id') for x in db_invites)
+    logging.debug(db_courses)
 
-    q = """UPDATE oimr_invitations 
-           SET invitation_status='ACCEPTED' 
-           WHERE 
-               invitation_status='SENT' AND 
-               invitation_id NOT IN {}""".format(invites)
-
-    c = sql.cursor()
-    try:
-        r = c.execute(q)
-    except:
-        logging.exception('Failed to update DB')
-    else:
-        sql.commit()
-        logging.info('Updated {} rows'.format(r))
-
-    q2 = """SELECT invitation_status FROM oimr_invitations"""
-    try:
-        r = c.execute(q2)
-    except:
-        logging.exception("DB Query failed")
-    else:
-        results = c.fetchall()
-        logging.info('Breakdown for {} - {}'.format(courseId, Counter((i[0] for i in results))))
+    for course in db_courses:
+        g_invites = [i.get('id') for i in list_invitations_for_course(course)]
+        for inv in db_invites:
+            if all((inv.get('course_Id')==course, inv.get('invitation_Id') not in g_invites)):
+                inv['invitation_status'] = 'ACCEPTED'
     
-    c.close()
+    sql.table_insert_update('oimr_invitations', db_invites)
+
+    q = "select course_id, invitation_status, count(invitation_status) as 'count' from oimr_invitations group by course_id, invitation_status"
+    for row in sql._query(q):
+        print(f"""{row['course_id']:10} - {row['invitation_status']:20} - {row['count']:4}""")
 
 def invitation_accepted(invitation_id):
     try:
@@ -118,16 +101,15 @@ def find_student(registrant, course_id):
         logging.exception('registrant must be a registrant object')
     
     # Check for student in DB
-    q1 = """SELECT * FROM oimr_invitations WHERE registrant_Id = %s"""
-    v1 = (registrant.registrationId, )
-    cur = sql.cursor(d=True)
-    rows = cur.execute(q1, v1)
-    dbresult = cur.fetchone()
-    logging.info('Student {}found in invitations table'.format('not ' if not rows else ''))
+    q = f"""SELECT * FROM oimr_invitations WHERE registrant_Id = '{registrant.registrationId}'"""
+    dbresult = sql._query(q)
+    dbresult = dbresult[0] if dbresult else []
+    logging.debug(dbresult)
+    logging.info('Student {}found in invitations table{}'.format('not ' if not dbresult else '', ' with error' if 'ERR' in dbresult['invitation_status'] else ''))
     logging.debug(dbresult)
 
     # Check for student in Classroom
-    if rows:
+    if dbresult:
         logging.info('Student has {}accepted invitation.'.format('not ' if not invitation_accepted(dbresult['invitation_Id']) else ''))
     try:
         google_api.cls_svc.courses().students().get(courseId=enroll.course_alias(course_id), userId=registrant.email_addr).execute()
@@ -173,8 +155,7 @@ def remove_student(registrant, courseId):
         except:
             logging.warn('Invitation not found')
         else:
-            logging.info('Invitation deleted - you may re-invite.')
-        
+            logging.info('Invitation deleted - you may re-invite.') 
 
 def invite_student(registrant, courseId, force=False):
     alias = 'd:'+courseId
@@ -208,7 +189,7 @@ def invite_student(registrant, courseId, force=False):
         logging.exception('Unable to add student to classroom')
     else:
         logging.info('Student invited to classroom with id {}'.format(result.get('id')))
-        sql.add_invitation(registrant.registrationId, registrant.email_addr, courseId, invitationId=result.get('id')))
+        sql.add_invitation(registrant.registrationId, registrant.email_addr, courseId, invitationId=result.get('id'))
 
 def get_invite_errors():
     q = """SELECT * FROM oimr_invitations WHERE invitation_status LIKE 'ERR%'"""
@@ -229,6 +210,10 @@ def get_invite_errors():
     
     return output
 
+def resend_invite(registrant, courseId):
+    remove_student(registrant, courseId)
+    invite_student(registrant, courseId)
+
 def fix_invite(old_hash, new_hash):
     c = sql.cursor()
     q1 = """DELETE FROM oimr_invitations WHERE hash = %s"""
@@ -239,3 +224,36 @@ def fix_invite(old_hash, new_hash):
     c.execute(q2, v2)
     sql.commit()
     c.close()
+
+def generate_change_list(registrants):
+    """
+    GENERATOR METHOD - NOT FUNCTION
+    Iterate over registrants, comparing against enrollments from DB
+    When changes need to occur, yield result
+    """
+    logging.debug('change_list() started')
+    registrants = [r for r in registrants if r.email_addr in 'lisha.haughton@gmail.com jeremy.m.welch@gmail.com'.split()]
+    # DB call to pull all enrollments except commons from DB
+    enrollments = sql.get_core_course_invitations()
+
+    for r in registrants:
+        # Find courses needing enrollment
+        courses_to_add = []
+        if r.core_courses:
+            for course in r.core_courses:
+                if paSQL.hash_student(r.registrationId, course) not in enrollments:
+                    courses_to_add.append(course)
+        #if r.extras and (r.oimr_id, 'tradhall1') not in enrollments:
+            #courses_to_add.append('tradhall1')
+
+        # Find courses needing withdrawal
+        this_enrollment = [v for k,v in enrollments.items() if v.get('registrant_Id') == r.registrationId]
+        logging.debug(this_enrollment)
+        courses_to_remove = [e.get('course_Id') for e in this_enrollment if e.get('course_Id') not in r.core_courses]
+        
+        # Iterate enrollments for student
+        # Append courses no longer in registration
+
+        # Only yield result if there are changes
+        if courses_to_add or courses_to_remove:
+            yield r, {'add': courses_to_add, 'remove': courses_to_remove}
