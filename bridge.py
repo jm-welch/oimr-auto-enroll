@@ -172,7 +172,10 @@ def generate_change_list(registrants):
         # Find courses needing withdrawal
         this_enrollment = [v for k,v in enrollments.items() if v.get('registrant_Id') == r.registrationId]
         logging.debug(this_enrollment)
-        courses_to_remove = [e.get('course_Id') for e in this_enrollment if e.get('course_Id') not in r.core_courses]
+        if r.core_courses:
+            courses_to_remove = [e.get('course_Id') for e in this_enrollment if e.get('course_Id') not in r.core_courses]
+        else:
+            courses_to_remove = [e.get('course_Id') for e in this_enrollment]
 
         # Iterate enrollments for student
         # Append courses no longer in registration
