@@ -83,7 +83,11 @@ def update_invitation_status():
     sql.table_insert_update('oimr_invitations', db_invites)
 
     q = "select course_id, invitation_status, count(invitation_status) as 'count' from oimr_invitations group by course_id, invitation_status"
-    for row in sql._query(q):
+    rows = sql._query(q)
+
+    #statuses = 
+    
+    for row in rows:
         print(f"""{row['course_id']:10} - {row['invitation_status']:20} - {row['count']:4}""")
 
 def invitation_accepted(invitation_id):
@@ -119,27 +123,22 @@ def find_student(registrant, course_id):
         logging.info('Student email found in course enrollments.')
 
 def remove_student(registrant, courseId):
-    q1 = """SELECT invitation_Id FROM oimr_invitations WHERE hash = %s"""
-    inv_hash = SQL.hash_student(registrant.registrationId, courseId)
-    val = (inv_hash, )
+    inv_hash = paSQL.hash_student(registrant.registrationId, courseId)
+    q1 = f"""SELECT invitation_Id FROM oimr_invitations WHERE hash = '{inv_hash}'"""
+    
     logging.info('Invite hash: '+inv_hash)
     
-    c = sql.cursor(d=True)
-    rows = c.execute(q1, val)
+    rows = sql._query(q1)
     if rows:
         logging.info('{} found in invitations table for course {}'.format(registrant, courseId))
-        result = c.fetchone()
-        invitationId = result['invitation_Id']
+        invitationId = rows[0]['invitation_Id']
     
-        q2 = """DELETE FROM oimr_invitations WHERE hash = %s"""
-        if c.execute(q2, val):
+        dbresult = sql.remove_invitation(registrant.registrationId, courseId)
+        if dbresult:
             logging.info('{} removed from invitations table for course {}'.format(registrant, courseId))
-            sql.commit()
     else:
         logging.info('{} invite to {} not found in invitations table'.format(registrant, courseId))
         invitationId = None
-        
-    c.close()
     
     alias = 'd:'+courseId
     if (invitationId and invitation_accepted(invitationId)) or not invitationId:
@@ -160,7 +159,7 @@ def remove_student(registrant, courseId):
 def invite_student(registrant, courseId, force=False):
     alias = 'd:'+courseId
 
-    invHash = SQL.hash_student(registrant.registrationId, courseId)
+    invHash = paSQL.hash_student(registrant.registrationId, courseId)
 
     if courseId == 'commons1':
         logging.info('Invite {} to the Commons'.format(registrant))

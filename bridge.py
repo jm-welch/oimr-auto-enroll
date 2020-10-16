@@ -155,7 +155,7 @@ def generate_change_list(registrants):
     When changes need to occur, yield result
     """
     logging.debug('generate_change_list() started')
-    registrants = [r for r in registrants if r.email_addr in 'lisha.haughton@gmail.com jeremy.m.welch@gmail.com'.split()]
+
     # DB call to pull all enrollments except commons from DB
     enrollments = sql.get_course_invitations()
 
@@ -173,7 +173,7 @@ def generate_change_list(registrants):
         this_enrollment = [v for k,v in enrollments.items() if v.get('registrant_Id') == r.registrationId]
         logging.debug(this_enrollment)
         courses_to_remove = [e.get('course_Id') for e in this_enrollment if e.get('course_Id') not in r.core_courses]
-        
+
         # Iterate enrollments for student
         # Append courses no longer in registration
 
@@ -196,7 +196,7 @@ def mysql_update_registrants(registrants):
             'Email': student.email_addr,
             'registrant_json': json.dumps(student._raw)
         }
-        
+
         studentsRegistered.append(student_Registered)
 
     return studentsRegistered
@@ -227,10 +227,10 @@ def main(regfox_api, google_api):
         summary.append(':small_blue_diamond: Invited {} to commons ({} error{})'.format(status[0], status[1], 's' if any((not(status[1]), status[1] > 1)) else ''))
 
     # Process the list of tradhall/corecourse changes
-    #[process_changes(google_api, reg, **changes) for reg, changes in generate_change_list(registrants) or []]
-        
+    [process_changes(google_api, reg, **changes) for reg, changes in generate_change_list(registrants) or []]
+
     #summary.append('* {} students with enrollment changes'.format(len(change_list)))
-    
+
     post_to_slack('\n'.join(summary))
     return
     # lets clean up any stragglers
@@ -241,4 +241,4 @@ if __name__ == '__main__':
     regfox_api = registration.RegFoxAPI(**sekrets['regfox'])
     google_api = enrollment.GoogleAPI(sekrets['google'])
     main(regfox_api, google_api)
-    sql.exit_connections
+    sql.exit_connections()
