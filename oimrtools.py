@@ -27,6 +27,14 @@ sekrets = sql.get_sekrets()
 logging.debug('Connecting to Slack...')
 slack_client = WebClient(**sekrets['slack'])
 
+def reconnect():
+    connected = sql.gMysqlConn.is_connected()
+    logging.info(f"SQL connection is {['down', 'up'][connected]}")
+    if not connected:
+        logging.info('Attempting reconnect')
+        sql.gMysqlConn.connect()
+
+
 def post_to_slack(message, channel='G01BV8478D7'):
     """
     Post $message to Slack in $channel (default=#enrollment-feed)
@@ -84,13 +92,23 @@ def update_invitation_status():
 
     sql.table_insert_update('oimr_invitations', db_invites)
 
-    q = "select course_id, invitation_status, count(invitation_status) as 'count' from oimr_invitations group by course_id, invitation_status"
+    get_invitation_status()
+
+def get_invitation_status():
+    q = "select * from invite_totals_vw"
     rows = sql._query(q)
+    rows.sort(key=lambda r: r['course_Id'])
 
-    #statuses =
+    logging.debug(rows)
 
-    for row in rows:
-        print(f"""{row['course_id']:10} - {row['invitation_status']:20} - {row['count']:4}""")
+    result = []
+
+    for row in [{'course_Id': 'ID', 'sent': 'Sent', 'accepted': 'Accepted', 'tot': 'Total', 'unsent': 'Errors'}] + rows:
+        result.append(f"{row['course_Id']:10} {row['sent'] or '':<10} {row['accepted']:<10} {row['unsent'] or '':<10} {row['tot']:>10}")
+
+    result.insert(1, '-'*50)
+
+    print('\n'.join(result))
 
 def invitation_accepted(invitation_id):
     try:

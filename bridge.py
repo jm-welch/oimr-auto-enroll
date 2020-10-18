@@ -56,7 +56,6 @@ sekrets = sql.get_sekrets()
 
 slack_client = WebClient(**sekrets['slack'])
 
-
 def post_to_slack(message, channel='G01BV8478D7'):
     """
     Post $message to Slack in $channel (default=#enrollment-feed)
@@ -66,6 +65,29 @@ def post_to_slack(message, channel='G01BV8478D7'):
     body = {
         'channel': channel,
         'text': message
+    }
+
+    try:
+        response = slack_client.chat_postMessage(**body)
+    except SlackApiError as e:
+        logging.exception('Error sending message to Slack')
+
+def post_markdown_to_slack(message, channel='G01BV8478D7'):
+    """
+    Post $message to Slack in $channel as a markdown block
+    """
+
+    body = {
+        "channel": channel,
+        "blocks": [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": message
+                }
+            }
+        ]
     }
 
     try:
@@ -106,6 +128,48 @@ def make_commons_invite_list(registrants):
     logging.debug(result)
     return result
 
+def list_invitations_for_course(course_id, google_api):
+    alias = enrollment.course_alias(course_id)
+
+    invites = []
+    try:
+        result = google_api.cls_svc.invitations().list(courseId=alias).execute()
+        invites.extend(result.get('invitations', []))
+        while result.get('nextPageToken'):
+            result = google_api.cls_svc.invitations().list(courseId=alias, pageToken=result['nextPageToken']).execute()
+            invites.extend(result.get('invitations', []))
+    except:
+        invites = []
+    logging.info('{} unaccepted invitations for {}'.format(len(invites), course_id))
+    return invites
+
+def update_course_invitations(google_api):
+    db_invites = sql.get_sent_invitations()
+    db_courses = set(x.get('course_Id') for x in db_invites)
+
+    for course in db_courses:
+        g_invites = [i.get('id') for i in list_invitations_for_course(course, google_api)]
+        for inv in db_invites:
+            if all((inv.get('course_Id')==course, inv.get('invitation_Id') not in g_invites)):
+                inv['invitation_status'] = 'ACCEPTED'
+
+    sql.table_insert_update('oimr_invitations', db_invites)
+
+def get_invitation_status():
+    q = "select * from invite_totals_vw"
+    rows = sql._query(q)
+    rows.sort(key=lambda r: r['course_Id'])
+
+    logging.debug(rows)
+
+    result = []
+
+    for row in [{'course_Id': 'ID', 'sent': 'Sent', 'accepted': 'Accepted', 'tot': 'Total', 'unsent': 'Errors'}] + rows:
+        result.append(f"{row['course_Id']:10} | {row['sent'] or '':<10} | {row['accepted']:<10} | {row['unsent'] or '':<10} | {row['tot']:>10}")
+
+    result.insert(1, '-'*50)
+
+    return result
 
 def invite_student(registrant, courseId, google_api):
     """
@@ -157,7 +221,7 @@ def generate_change_list(registrants):
     logging.debug('generate_change_list() started')
 
     # DB call to pull all enrollments except commons from DB
-    enrollments = sql.get_course_invitations()
+    enrollments = sql.get_course_invitations(exclude=('commons1', 'tradhall1'))
 
     for r in registrants:
         # Find courses needing enrollment
@@ -171,11 +235,14 @@ def generate_change_list(registrants):
 
         # Find courses needing withdrawal
         this_enrollment = [v for k,v in enrollments.items() if v.get('registrant_Id') == r.registrationId]
+        this_enrollment = [e.get('course_Id') for e in this_enrollment]
         logging.debug(this_enrollment)
         if r.core_courses:
-            courses_to_remove = [e.get('course_Id') for e in this_enrollment if e.get('course_Id') not in r.core_courses]
+            courses_to_remove = [e for e in this_enrollment if e not in r.core_courses]
         else:
-            courses_to_remove = [e.get('course_Id') for e in this_enrollment]
+            courses_to_remove = [e for e in this_enrollment]
+        # if not r.extras and 'tradhall1' in this_enrollment:
+        #     courses_to_remove.append('tradhall1')
 
         # Iterate enrollments for student
         # Append courses no longer in registration
@@ -233,10 +300,12 @@ def main(regfox_api, google_api):
     [process_changes(google_api, reg, **changes) for reg, changes in generate_change_list(registrants) or []]
 
     #summary.append('* {} students with enrollment changes'.format(len(change_list)))
+    update_course_invitations(google_api)
 
     post_to_slack('\n'.join(summary))
+    post_to_slack(':small_blue_diamond: Invitation status:')
+    post_markdown_to_slack("```\n" + '\n'.join(get_invitation_status()) + "\n```")
     return
-    # lets clean up any stragglers
 
 
 if __name__ == '__main__':
