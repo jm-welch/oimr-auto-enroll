@@ -167,7 +167,7 @@ def get_invitation_status():
     for row in [{'course_Id': 'ID', 'sent': 'Sent', 'accepted': 'Accepted', 'tot': 'Total', 'unsent': 'Errors'}] + rows:
         result.append(f"{row['course_Id']:10} | {row['sent'] or '':<10} | {row['accepted']:<10} | {row['unsent'] or '':<10} | {row['tot']:>10}")
 
-    result.insert(1, '-'*50)
+    result.insert(1, '-'*60)
 
     return result
 
@@ -198,6 +198,8 @@ def invite_student(registrant, courseId, google_api):
         logging.info('{!r} invited to course {} with studentId {}'.format(registrant, courseId, result['id']))
         sql.add_invitation(registrant.registrationId, registrant.email_addr, courseId, invitationId=result['id'])
         post_to_slack(f':eight_spoked_asterisk: {registrant!r} successfully invited to {courses.course_title_with_code(courseId)}')
+        if f"{courseId}L1" in registrant.qa_forums:
+            post_to_slack(f":interrobang: @here {registrant} signed up for {courseId} Q&A - notify {courses.ta_for_course(courseId)} to update lessons.")
         return True
 
 def remove_student(registrant, courseId, googleApi):
@@ -221,7 +223,7 @@ def generate_change_list(registrants):
     logging.debug('generate_change_list() started')
 
     # DB call to pull all enrollments except commons from DB
-    enrollments = sql.get_course_invitations(exclude=('commons1', 'tradhall1'))
+    enrollments = sql.get_course_invitations(exclude=('commons1', 'PNM'))
 
     for r in registrants:
         # Find courses needing enrollment
@@ -230,19 +232,20 @@ def generate_change_list(registrants):
             for course in r.core_courses:
                 if OIMRMySQL.hash_student(r.registrationId, course) not in enrollments:
                     courses_to_add.append(course)
-        #if r.extras and OIMRMySQL.hash_student(r.registrationId, 'tradhall1') not in enrollments:
-            #courses_to_add.append('tradhall1')
+        if r.extras and OIMRMySQL.hash_student(r.registrationId, 'tradhall1') not in enrollments:
+            courses_to_add.append('tradhall1')
 
         # Find courses needing withdrawal
         this_enrollment = [v for k,v in enrollments.items() if v.get('registrant_Id') == r.registrationId]
         this_enrollment = [e.get('course_Id') for e in this_enrollment]
+        this_core_courses = [c for c in this_enrollment if len(c) == 3]
         logging.debug(this_enrollment)
         if r.core_courses:
-            courses_to_remove = [e for e in this_enrollment if e not in r.core_courses]
+            courses_to_remove = [e for e in this_core_courses if e not in r.core_courses]
         else:
-            courses_to_remove = [e for e in this_enrollment]
-        # if not r.extras and 'tradhall1' in this_enrollment:
-        #     courses_to_remove.append('tradhall1')
+            courses_to_remove = [e for e in this_core_courses]
+        if all((not r.extras ,'tradhall1' in this_enrollment)):
+            courses_to_remove.append('tradhall1')
 
         # Iterate enrollments for student
         # Append courses no longer in registration
@@ -250,7 +253,6 @@ def generate_change_list(registrants):
         # Only yield result if there are changes
         if courses_to_add or courses_to_remove:
             yield r, {'add': courses_to_add, 'remove': courses_to_remove}
-
 
 def mysql_update_registrants(registrants):
     """

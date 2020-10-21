@@ -18,7 +18,8 @@ SCOPES = [
     'https://www.googleapis.com/auth/classroom.rosters',
     'https://www.googleapis.com/auth/classroom.courses',
     'https://www.googleapis.com/auth/classroom.profile.emails',
-    'https://www.googleapis.com/auth/classroom.profile.photos'
+    'https://www.googleapis.com/auth/classroom.profile.photos',
+    'https://www.googleapis.com/auth/classroom.coursework.students'
 ]
 
 def course_alias(courseId):
@@ -96,6 +97,19 @@ class GoogleAPI():
         except:
             pass
 
+    def list_students_for_course(self, courseId):
+        """ Fetch all students for a course """
+        # API Ref: https://googleapis.github.io/google-api-python-client/docs/dyn/classroom_v1.courses.students.html#list
+        
+        output = []
+        result = self.cls_svc.courses().students().list(courseId=course_alias(courseId)).execute()
+        while result.get('nextPageToken'):
+            output.extend(result.get('students', []))
+            result = self.cls_svc.courses().students().list(courseId=course_alias(courseId), pageToken=result.get('nextPageToken')).execute()
+        output.extend(result.get('students', []))
+
+        return output
+    
     def add_student(self, courseId, studentEmail, role='STUDENT'):
         # Invite a student to join a Classroom
         body = {
@@ -125,9 +139,6 @@ class GoogleAPI():
         finally:
             return result
         
-        
-
-
 
 def get_GoogleApi():
     api = GoogleAPI()

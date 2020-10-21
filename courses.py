@@ -17,6 +17,12 @@ def list_all_liveQA():
 def pprint():
     print(json.dumps(COURSES, indent=2, ensure_ascii=False))
 
+def ta_course_list(ta):
+    return [k for k, v in COURSES.items() if v.get('ta') == ta]
+
+def ta_for_course(course):
+    return COURSES.get(course, {}).get('ta')
+
 # Import courses from json
 with open('courses.json', 'r') as infile:
     COURSES = json.load(infile)

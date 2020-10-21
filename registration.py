@@ -293,7 +293,7 @@ class Registrant():
 
     def _qa_forums(self, type_filter=False):
         fora = [self.qa_regex.search(f.get('label', '')) for f in self.true_fields]
-        fora = [m.group(1) for m in fora if m] or None
+        fora = [m.group(1) for m in fora if m] or []
         if type_filter and fora:
             fora = [x for x in fora if x[3].lower() == type_filter.lower()]
         return fora

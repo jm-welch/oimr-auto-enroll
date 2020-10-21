@@ -279,15 +279,17 @@ class PyAnywhereAPI():
 
         return result
 
-    def get_course_invitations(self, exclude=('commons1', 'tradhall1')):
+    def get_course_invitations(self, exclude=('commons1', '')):
         self.gMysqlCur = self.get_mysql_cursor(True)
-        q = f"SELECT * FROM oimr_invitations{f' WHERE course_Id NOT IN {exclude}' if exclude else ''}"
+        q = f"SELECT * FROM oimr_invitations{f' WHERE course_Id NOT IN {tuple(exclude)}' if exclude else ''}"
+        print(q)
 
         try:
             self.gMysqlCur.execute(q)
             result = self.gMysqlCur.fetchall()
             result = {r['hash']: r for r in result}
         except mysqlConnErr as e:
+            result = []
             print(e)
         finally:
             if self.gMysqlCur is not None:
